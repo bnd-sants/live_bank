@@ -46,3 +46,20 @@ app.*.map.json
 
 # Environment variables
 .env*
+
+# Desktop related
+**/windows/flutter/ephemeral/
+**/linux/flutter/ephemeral/
+**/macos/Flutter/ephemeral/
+**/windows/flutter/generated_config.cmake
+**/linux/flutter/generated_config.cmake
+
+# Executables and libraries
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Exceptions for project icons if needed (optional, but keep it clean)
+!/assets/
+
