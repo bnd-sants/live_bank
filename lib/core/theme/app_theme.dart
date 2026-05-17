@@ -27,7 +27,7 @@ class AppTheme {
   
   // Método auxiliar para opacidade
   static Color withCustomOpacity(Color color, double opacity) {
-    return color.withOpacity(opacity);
+    return color.withValues(alpha: opacity);
   }
   
   // Tema claro
@@ -247,7 +247,7 @@ class AppTheme {
         borderRadius: BorderRadius.circular(12),
       ),
       margin: const EdgeInsets.all(8),
-      shadowColor: Colors.black.withOpacity(0.3),
+      shadowColor: Colors.black.withValues(alpha: 0.3),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
@@ -484,7 +484,7 @@ class AppTheme {
 
   static final List<BoxShadow> darkCardShadow = [
     BoxShadow(
-      color: Colors.black.withOpacity(0.3),
+      color: Colors.black.withValues(alpha: 0.3),
       blurRadius: 10,
       spreadRadius: 0,
       offset: const Offset(0, 4),
@@ -493,7 +493,7 @@ class AppTheme {
   
   static final List<BoxShadow> darkElevatedShadow = [
     BoxShadow(
-      color: Colors.black.withOpacity(0.5),
+      color: Colors.black.withValues(alpha: 0.5),
       blurRadius: 15,
       spreadRadius: 0,
       offset: const Offset(0, 6),

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:live_bank/services/biometric_service.dart';
 import '../providers/auth_provider.dart';
-import 'package:live_bank/features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'package:live_bank/features/dashboard/presentation/screens/home_screen.dart';
 import 'register_screen.dart';
-import 'package:live_bank/routes/custom_route.dart';
 import 'package:live_bank/core/utils/validators.dart';
 import 'package:live_bank/core/theme/app_colors.dart';
+import 'package:live_bank/routes/custom_route.dart';
+import 'package:live_bank/core/l10n/app_localizations.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -61,7 +61,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
       
       if (!isValidEmail(email)) {
-        _emailError = 'E-mail inválido';
+        _emailError = context.l10n('invalid_email');
       } else {
         _emailError = null;
       }
@@ -77,7 +77,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
       
       if (_senhaController.text.length < 4) {
-        _senhaError = 'A senha deve ter no mínimo 4 caracteres';
+        _senhaError = context.l10n('password_too_short');
       } else {
         _senhaError = null;
       }
@@ -86,8 +86,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _verificarBiometria() async {
     final disponivel = await _biometricService.isBiometricAvailable();
+    final cadastrada = await _biometricService.hasEnrolledBiometrics();
+    final habilitada = await _biometricService.isBiometricEnabled();
     setState(() {
-      _biometriaDisponivel = disponivel;
+      _biometriaDisponivel = disponivel && cadastrada && habilitada;
     });
   }
 
@@ -96,7 +98,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (autenticado && mounted) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const DashboardScreen()),
+        MaterialPageRoute(builder: (context) => HomeScreen()),
       );
     }
   }
@@ -117,57 +119,60 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final senha = _senhaController.text;
     
     try {
+      debugPrint('LoginScreen: Iniciando processo de login para $email');
       await ref.read(authProvider.notifier).signIn(email, senha);
+      debugPrint('LoginScreen: signIn concluído com sucesso');
       
-      if (!mounted) return;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Login realizado com sucesso!'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
-      );
-      
-      // Aguarda um pouco para o usuário ver a mensagem antes de navegar
-      await Future.delayed(const Duration(milliseconds: 1500));
-      
-      if (!mounted) return;
-      
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const DashboardScreen()),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      
-      String mensagemErro = 'Erro ao fazer login. Tente novamente.';
-      if (e is AuthException) {
-        mensagemErro = e.message;
-      } else {
-        mensagemErro = e.toString();
+      if (!mounted) {
+        debugPrint('LoginScreen: Widget não está mais montado (provavelmente root já mudou)');
+        return;
       }
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(mensagemErro),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      // Ao logar com sucesso, limpamos a pilha e vamos para a Home
+      debugPrint('LoginScreen: Executando navegação de fallback');
+      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+    } catch (e) {
+      debugPrint('LoginScreen: Erro capturado no _login: $e');
+      // O erro é tratado pelo ref.listen no build
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
     final authState = ref.watch(authProvider);
     final isLoading = authState.isLoading;
 
+    // Escuta erros de autenticação para exibir mensagens premium
+    ref.listen(authProvider, (previous, next) {
+      next.whenOrNull(
+        error: (error, stack) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.white),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      error.toString(),
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.redAccent,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              margin: const EdgeInsets.all(16),
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        },
+      );
+    });
+
     return Scaffold(
-      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -202,7 +207,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           const SizedBox(height: 16),
                           RichText(
-                            text: const TextSpan(
+                            text: TextSpan(
                               style: TextStyle(
                                 fontSize: 36,
                                 fontWeight: FontWeight.bold,
@@ -213,7 +218,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 TextSpan(
                                   text: 'LIVE',
                                   style: TextStyle(
-                                    color: AppColors.textPrimary,
+                                    color: theme.textTheme.displayLarge?.color,
                                   ),
                                 ),
                                 TextSpan(
@@ -230,9 +235,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Experiência bancária premium',
+                      context.l10n('premium_experience'),
                       style: TextStyle(
-                        color: AppColors.textSecondary,
+                        color: theme.textTheme.bodyMedium?.color,
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
                         letterSpacing: 0.5,
@@ -246,8 +251,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // Formulário de login
                 Card(
                   elevation: 8,
-                  color: AppColors.surface,
-                  shadowColor: Colors.black.withOpacity(0.4),
+                  shadowColor: Colors.black.withValues(alpha: 0.4),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(24),
                   ),
@@ -258,19 +262,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       children: [
                         // Título do formulário
                         Text(
-                          'Acesse sua conta',
+                          context.l10n('login'),
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
                             letterSpacing: 0.5,
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Bem-vindo de volta ao Live Bank',
+                          context.l10n('login_subtitle'),
                           style: TextStyle(
-                            color: AppColors.textSecondary,
+                            color: theme.textTheme.bodyMedium?.color,
                             fontSize: 14,
                           ),
                         ),
@@ -282,11 +285,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           keyboardType: TextInputType.emailAddress,
                           style: const TextStyle(fontSize: 16),
                           decoration: InputDecoration(
-                            labelText: 'E-mail',
+                            labelText: context.l10n('email'),
                             hintText: 'exemplo@email.com',
                             prefixIcon: Icon(
                               Icons.email_outlined,
-                              color: AppColors.primary.withOpacity(0.8),
+                              color: AppColors.primary.withValues(alpha: 0.8),
                             ),
                             errorText: _emailError,
                             border: OutlineInputBorder(
@@ -295,7 +298,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16),
                               borderSide: BorderSide(
-                                color: AppColors.divider,
+                                color: theme.dividerColor,
                               ),
                             ),
                             focusedBorder: OutlineInputBorder(
@@ -315,10 +318,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           obscureText: _obscurePassword,
                           style: const TextStyle(fontSize: 16),
                           decoration: InputDecoration(
-                            labelText: 'Senha',
+                            labelText: context.l10n('password'),
                             prefixIcon: Icon(
                               Icons.lock_outline,
-                              color: AppColors.primary.withOpacity(0.8),
+                              color: AppColors.primary.withValues(alpha: 0.8),
                             ),
                             errorText: _senhaError,
                             suffixIcon: IconButton(
@@ -334,7 +337,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16),
                               borderSide: BorderSide(
-                                color: AppColors.divider,
+                                color: theme.dividerColor,
                               ),
                             ),
                             focusedBorder: OutlineInputBorder(
@@ -355,8 +358,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             onPressed: (isLoading || !_isFormValid) ? null : _login,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _isFormValid 
-                                  ? AppColors.primary 
-                                  : AppColors.divider,
+                                  ? theme.primaryColor 
+                                  : theme.dividerColor,
                               elevation: _isFormValid ? 4 : 0,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
@@ -371,9 +374,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       color: Colors.white,
                                     ),
                                   )
-                                : const Text(
-                                    'Entrar',
-                                    style: TextStyle(
+                                : Text(
+                                    context.l10n('login'),
+                                    style: const TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                       letterSpacing: 1,
@@ -388,9 +391,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              'Ainda não tem conta?',
+                              context.l10n('no_account'),
                               style: TextStyle(
-                                color: AppColors.textSecondary,
+                                color: theme.textTheme.bodyMedium?.color,
                                 fontSize: 14,
                               ),
                             ),
@@ -403,8 +406,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 );
                               },
                               child: Text(
-                                'Cadastre-se',
-                                style: TextStyle(
+                                context.l10n('register'),
+                                style: const TextStyle(
                                   color: AppColors.primary,
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
@@ -444,10 +447,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: AppColors.primary.withOpacity(0.3),
+                                  color: AppColors.primary.withValues(alpha: 0.3),
                                   width: 2,
                                 ),
-                                color: AppColors.primary.withOpacity(0.05),
+                                color: AppColors.primary.withValues(alpha: 0.05),
                               ),
                               padding: const EdgeInsets.all(20),
                               child: const Icon(
@@ -460,8 +463,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'Acesso Biométrico',
-                          style: TextStyle(
+                          context.l10n('biometrics'),
+                          style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                             color: AppColors.primary,

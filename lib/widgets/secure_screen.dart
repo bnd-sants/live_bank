@@ -113,10 +113,12 @@ class _SecureScreenState extends State<SecureScreen>
   }
 
   void _hideContent() {
+    if (_isWebOrDesktop) return;
     _channel.invokeMethod('hideContent');
   }
 
   void _showContent() {
+    if (_isWebOrDesktop) return;
     _channel.invokeMethod('showContent');
   }
 
@@ -125,6 +127,7 @@ class _SecureScreenState extends State<SecureScreen>
       SystemUiMode.manual,
       overlays: SystemUiOverlay.values,
     );
+    if (_isWebOrDesktop) return;
     _channel.invokeMethod('disableSecure');
   }
 

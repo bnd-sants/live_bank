@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:live_bank/core/utils/result.dart';
 import 'package:live_bank/features/transactions/data/repositories/transaction_repository.dart';
 
 final transferAmountProvider = StateProvider<double>((ref) => 0.0);

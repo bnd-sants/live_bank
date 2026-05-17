@@ -53,26 +53,6 @@
         <item name="android:windowExitAnimation">@anim/slide_out_right</item>
     </style>
     
-    <!-- Tema de lançamento -->
-    <style name="LaunchTheme" parent="AppTheme">
-        <item name="android:windowBackground">@drawable/launch_background</item>
-        <item name="android:windowFullscreen">true</item>
-        <item name="android:windowContentOverlay">@null</item>
-        <item name="android:windowNoTitle">true</item>
-        <item name="android:windowActionBar">false</item>
-        <item name="android:windowFullscreen">true</item>
-        <item name="android:windowContentOverlay">@null</item>
-    </style>
-    
-    <!-- Tema normal -->
-    <style name="NormalTheme" parent="AppTheme">
-        <item name="android:windowBackground">@color/background</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@color/navigationBar</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar">false</item>
-    </style>
-    
     <!-- Estilo para diálogos -->
     <style name="AppDialogTheme" parent="ThemeOverlay.MaterialComponents.Dialog.Alert">
         <item name="android:windowBackground">@color/backgroundCard</item>

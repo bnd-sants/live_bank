@@ -25,9 +25,9 @@ class TransactionRepository {
             .from('accounts')
             .select('balance')
             .eq('user_id', userId)
-            .single();
+            .maybeSingle();
 
-        final balance = (data['balance'] as num?)?.toDouble() ?? 0.0;
+        final balance = (data?['balance'] as num?)?.toDouble() ?? 0.0;
         
         // Salva no cache
         await _cache.put(LocalCacheService.userBoxName, 'balance', balance);
@@ -107,7 +107,12 @@ class TransactionRepository {
         return Result.failure(const ValidationFailure('Destinatário não encontrado. Verifique os dados.'));
       }
 
-      return Result.success(data as Map<String, dynamic>);
+      final userId = _supabase.auth.currentUser?.id;
+      if (data['user_id'] == userId) {
+        return Result.failure(const ValidationFailure('Você não pode realizar uma transferência para si mesmo.'));
+      }
+
+      return Result.success(data);
     } catch (e) {
       return Result.failure(ServerFailure('Erro ao buscar o contato.', originalError: e));
     }
@@ -122,6 +127,10 @@ class TransactionRepository {
       final userId = _supabase.auth.currentUser?.id;
       if (userId == null) {
         return Result.failure(const AuthFailure('Autentique-se para realizar transferências.'));
+      }
+
+      if (userId == toUserId) {
+        return Result.failure(const ValidationFailure('Você não pode transferir dinheiro para si mesmo.'));
       }
 
       final response = await _supabase.rpc('transfer_money', params: {
@@ -145,6 +154,48 @@ class TransactionRepository {
       return Result.failure(DatabaseFailure('Erro no processamento bancário: ${e.message}', originalError: e));
     } catch (e) {
       return Result.failure(ServerFailure('Ocorreu um erro inesperado na transferência.', originalError: e));
+    }
+  }
+
+  Future<Result<void>> simulateDeposit(double amount) async {
+    try {
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) return Result.failure(const AuthFailure('Usuário não autenticado.'));
+
+      // Primeiro verifica se a conta existe
+      final account = await _supabase
+          .from('accounts')
+          .select()
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      if (account == null) {
+        // Cria a conta com o saldo inicial
+        await _supabase.from('accounts').insert({
+          'user_id': userId,
+          'balance': amount,
+        });
+      } else {
+        // Atualiza o saldo existente
+        final currentBalance = (account['balance'] as num).toDouble();
+        await _supabase
+            .from('accounts')
+            .update({'balance': currentBalance + amount})
+            .eq('user_id', userId);
+      }
+
+      // Adiciona uma transação fictícia no histórico
+      await _supabase.from('transfers').insert({
+        'user_id': userId,
+        'description': 'Depósito Simulado (Teste)',
+        'valor': amount,
+        'destinatario': 'Minha Conta',
+        'data': DateTime.now().toIso8601String(),
+      });
+
+      return Result.success(null);
+    } catch (e) {
+      return Result.failure(ServerFailure('Erro ao simular depósito: $e'));
     }
   }
 }

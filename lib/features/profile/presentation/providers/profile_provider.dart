@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_bank/features/profile/data/repositories/user_repository.dart';
-import 'package:live_bank/core/utils/result.dart';
 
 class ProfileNotifier extends AsyncNotifier<Map<String, dynamic>> {
   @override

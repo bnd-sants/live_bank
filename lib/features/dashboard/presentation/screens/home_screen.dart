@@ -7,6 +7,10 @@ import 'package:live_bank/widgets/saldo_card.dart';
 import 'package:live_bank/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:live_bank/features/transactions/presentation/screens/transfer_screen.dart';
 import 'package:live_bank/features/settings/presentation/screens/settings_screen.dart';
+import 'package:live_bank/features/transactions/data/repositories/transaction_repository.dart';
+import 'package:live_bank/features/transactions/presentation/screens/receipts_list_screen.dart';
+import 'package:live_bank/features/transactions/presentation/screens/scanner_screen.dart';
+import 'package:live_bank/core/l10n/app_localizations.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -27,6 +31,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ref.invalidate(balanceProvider);
     ref.invalidate(userProfileProvider);
     ref.invalidate(transactionsProvider);
+  }
+
+  Future<void> _simulateDeposit() async {
+    final repository = ref.read(transactionRepositoryProvider);
+    final result = await repository.simulateDeposit(1000.0);
+    
+    if (mounted) {
+      result.when(
+        success: (_) {
+          ref.invalidate(balanceProvider);
+          ref.invalidate(transactionsProvider);
+          _showSuccessSnackbar('Depósito de R\$ 1.000,00 realizado para testes!');
+        },
+        failure: (failure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(failure.message), backgroundColor: Colors.red),
+          );
+        },
+      );
+    }
   }
 
   @override
@@ -55,11 +79,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             children: [
               userProfileAsync.when(
                 data: (profile) => Text(
-                  'Olá, ${profile['nome']?.split(' ').first ?? 'Usuário'}',
+                  '${context.l10n('welcome')}, ${profile['nome']?.split(' ').first ?? 'Usuário'}',
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 loading: () => const Text('Carregando...', style: TextStyle(fontSize: 24)),
-                error: (_, __) => const Text('Olá!', style: TextStyle(fontSize: 24)),
+                error: (_, __) => Text('${context.l10n('welcome')}!', style: const TextStyle(fontSize: 24)),
               ),
               const SizedBox(height: 10),
               SaldoCard(
@@ -71,6 +95,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               const SizedBox(height: 20),
               _buildMainActions(),
+              const SizedBox(height: 12),
+              _buildTestActions(),
               const SizedBox(height: 20),
               const Text(
                 'Serviços',
@@ -92,7 +118,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         children: [
           userProfileAsync.when(
             data: (profile) => UserAccountsDrawerHeader(
-              decoration: const BoxDecoration(color: Color(0xFF20232A)),
+              decoration: BoxDecoration(color: Theme.of(context).primaryColor),
               accountEmail: Text(profile['email'] ?? ''),
               accountName: Text(
                 profile['nome'] ?? 'Usuário',
@@ -103,29 +129,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 child: profile['foto'] == null ? Text((profile['nome'] ?? 'U')[0].toUpperCase()) : null,
               ),
             ),
-            loading: () => const DrawerHeader(
-              decoration: BoxDecoration(color: Color(0xFF20232A)),
+            loading: () => DrawerHeader(
+              decoration: BoxDecoration(color: Theme.of(context).primaryColor),
               child: Center(child: CircularProgressIndicator()),
             ),
-            error: (_, __) => const DrawerHeader(
-              decoration: BoxDecoration(color: Color(0xFF20232A)),
+            error: (_, __) => DrawerHeader(
+              decoration: BoxDecoration(color: Theme.of(context).primaryColor),
               child: Text('Erro ao carregar perfil'),
             ),
           ),
           _buildDrawerItem(
             icon: Icons.dashboard,
-            title: 'Histórico',
+            title: context.l10n('history'),
             onTap: _navigateToDashboard,
           ),
           _buildThemeToggleItem(),
           _buildDrawerItem(
             icon: Icons.person,
-            title: 'Perfil',
+            title: context.l10n('profile'),
             onTap: () => Navigator.pushNamed(context, '/profile'),
           ),
           _buildDrawerItem(
             icon: Icons.settings,
-            title: 'Configurações',
+            title: context.l10n('settings'),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
@@ -180,24 +206,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildMainActions() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildActionButton(
-            icon: Icons.send,
-            text: 'Transferir',
-            onPressed: _navigateToTransfer,
-          ),
+    return _buildActionButton(
+      icon: Icons.send,
+      text: context.l10n('transfer'),
+      onPressed: _navigateToTransfer,
+    );
+  }
+
+  Widget _buildTestActions() {
+    return Card(
+      color: Colors.amber.withValues(alpha: 0.1),
+      child: ListTile(
+        leading: const Icon(Icons.science, color: Colors.amber),
+        title: Text(context.l10n('test_mode_title'), style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(context.l10n('test_mode_subtitle')),
+        trailing: ElevatedButton(
+          onPressed: _simulateDeposit,
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
+          child: Text(context.l10n('deposit'), style: const TextStyle(color: Colors.black)),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildActionButton(
-            icon: Icons.qr_code,
-            text: 'PIX',
-            onPressed: () => _showSuccessSnackbar('PIX em breve!'),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -211,27 +239,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       childAspectRatio: 1.5,
       children: [
         _buildServiceCard(
-          icon: Icons.credit_card,
-          title: 'Cartões',
-          onTap: () => Navigator.pushNamed(context, '/cards'),
+          icon: Icons.qr_code_scanner,
+          title: context.l10n('scan_qr'),
+          onTap: _navigateToScanner,
         ),
         _buildServiceCard(
           icon: Icons.trending_up,
-          title: 'Investimentos',
+          title: context.l10n('investments'),
           onTap: () => Navigator.pushNamed(context, '/investments'),
         ),
         _buildServiceCard(
           icon: Icons.receipt_long,
-          title: 'Comprovantes',
-          onTap: () => _showSuccessSnackbar('Comprovantes em breve!'),
-        ),
-        _buildServiceCard(
-          icon: Icons.help_outline,
-          title: 'Ajuda',
-          onTap: () => _showSuccessSnackbar('Suporte em breve!'),
+          title: context.l10n('receipts'),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ReceiptsListScreen()),
+            );
+          },
         ),
       ],
     );
+  }
+
+  Future<void> _navigateToScanner() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const ScannerScreen()),
+    );
+
+    if (result != null && mounted) {
+      // Aqui poderíamos processar o QR Code e ir para a tela de transferência
+      _showSuccessSnackbar('QR Code lido: $result');
+      // No futuro: Navigator.push(context, MaterialPageRoute(builder: (_) => TransferScreen(qrData: result)));
+    }
   }
 
   Widget _buildServiceCard({

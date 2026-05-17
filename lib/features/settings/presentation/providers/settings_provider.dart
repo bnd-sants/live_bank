@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_bank/services/biometric_service.dart';
+import 'package:live_bank/features/auth/data/repositories/auth_repository.dart';
 
 class BiometricState {
   final bool isAvailable;
@@ -35,8 +36,9 @@ class BiometricState {
 
 class SettingsNotifier extends StateNotifier<BiometricState> {
   final BiometricService _biometricService;
+  final Ref ref;
 
-  SettingsNotifier(this._biometricService) : super(BiometricState()) {
+  SettingsNotifier(this._biometricService, this.ref) : super(BiometricState()) {
     loadSettings();
   }
 
@@ -67,7 +69,7 @@ class SettingsNotifier extends StateNotifier<BiometricState> {
     }
   }
 
-  Future<bool> toggleBiometric(bool value) async {
+  Future<bool> toggleBiometric(bool value, {String? password}) async {
     state = state.copyWith(isLoading: true);
     
     try {
@@ -80,6 +82,30 @@ class SettingsNotifier extends StateNotifier<BiometricState> {
           state = state.copyWith(isLoading: false);
           return false;
         }
+
+        if (password != null) {
+          final repo = ref.read(authRepositoryProvider);
+          final user = repo.currentUser;
+          if (user == null || user.email == null) {
+            state = state.copyWith(isLoading: false);
+            return false;
+          }
+
+          // Tenta fazer login para validar a senha
+          try {
+            await repo.signIn(email: user.email!, password: password);
+          } catch (e) {
+            // Senha incorreta ou erro de rede
+            state = state.copyWith(isLoading: false);
+            return false;
+          }
+
+          // Se deu certo, salva as credenciais de forma segura!
+          await _biometricService.saveCredentials(user.email!, password);
+        }
+      } else {
+        // Ao desabilitar, limpa as credenciais biométricas salvas
+        await _biometricService.clearCredentials();
       }
 
       final success = await _biometricService.setBiometricEnabled(value);
@@ -105,5 +131,5 @@ final biometricServiceProvider = Provider((ref) => BiometricService());
 
 final settingsProvider = StateNotifierProvider<SettingsNotifier, BiometricState>((ref) {
   final service = ref.watch(biometricServiceProvider);
-  return SettingsNotifier(service);
+  return SettingsNotifier(service, ref);
 });

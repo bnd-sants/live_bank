@@ -157,5 +157,6 @@
         }
     ],
     "java.jdt.ls.java.home": "C:\\\\Program Files\\\\Zulu\\\\zulu-17",
-    "oracle.java.jdt.ls.java.home": "C:\\\\Program Files\\\\Zulu\\\\zulu-17"
+    "oracle.java.jdt.ls.java.home": "C:\\\\Program Files\\\\Zulu\\\\zulu-17",
+    "java.configuration.updateBuildConfiguration": "interactive"
 }

@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart' show MaskTextInputFormatter, MaskAutoCompletionType;
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:live_bank/core/utils/validators.dart';
 import 'package:live_bank/core/theme/app_colors.dart';
 import '../providers/auth_provider.dart';
-import 'package:live_bank/features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'package:live_bank/core/l10n/app_localizations.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -43,23 +42,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   // Chave do formulário para validação
   final _formKey = GlobalKey<FormState>();
-
-  // Verifica se todos os campos obrigatórios foram preenchidos corretamente
-  bool get _isFormValid {
-    return _emailController.text.isNotEmpty &&
-           _emailError == null &&
-           _senhaController.text.isNotEmpty &&
-           _senhaError == null &&
-           _confirmarSenhaController.text.isNotEmpty &&
-           _confirmarSenhaError == null &&
-           _nomeController.text.isNotEmpty &&
-           _nomeError == null &&
-           _telefoneController.text.isNotEmpty &&
-           _telefoneError == null &&
-           _cpfController.text.isNotEmpty &&
-           _cpfError == null &&
-           _aceitouTermos;
-  }
 
   @override
   void initState() {
@@ -107,7 +89,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       final text = _emailController.text.trim();
       if (!isValidEmail(text)) {
-        _emailError = 'E-mail inválido';
+        _emailError = context.l10n('invalid_email');
       } else {
         _emailError = null;
       }
@@ -122,8 +104,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       }
 
       if (!isStrongPassword(_senhaController.text)) {
-        _senhaError =
-            'A senha deve ter pelo menos 8 caracteres, incluindo letras maiúsculas, minúsculas, números e símbolos';
+        _senhaError = context.l10n('password_requirements');
       } else {
         _senhaError = null;
       }
@@ -143,7 +124,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       }
 
       if (_confirmarSenhaController.text != _senhaController.text) {
-        _confirmarSenhaError = 'As senhas não coincidem';
+        _confirmarSenhaError = context.l10n('passwords_not_match');
       } else {
         _confirmarSenhaError = null;
       }
@@ -158,7 +139,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       }
 
       if (!isValidName(_nomeController.text)) {
-        _nomeError = 'Digite nome e sobrenome válidos';
+        _nomeError = context.l10n('name_error');
       } else {
         _nomeError = null;
       }
@@ -181,11 +162,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       final cleaned = phone.replaceAll(RegExp(r'[^0-9]'), '');
       
       if (cleaned.length != 11) {
-        _telefoneError = 'O número deve ter 11 dígitos (DDD + 9 + número)';
+        _telefoneError = context.l10n('phone_error');
       } else if (cleaned[2] != '9') {
-        _telefoneError = 'Número de celular deve começar com 9 após o DDD';
+        _telefoneError = context.l10n('phone_start_9_error');
       } else if (RegExp(r'^(\d)\1+$').hasMatch(cleaned.substring(2))) {
-        _telefoneError = 'Número de telefone inválido';
+        _telefoneError = context.l10n('phone_invalid_error');
       } else {
         _telefoneError = null;
       }
@@ -202,9 +183,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       final cpf = _cpfController.text.replaceAll(RegExp(r'[^0-9]'), '');
       
       if (cpf.length != 11) {
-        _cpfError = 'CPF deve ter 11 dígitos';
+        _cpfError = context.l10n('cpf_digits_error');
       } else if (!isValidCPF(cpf)) {
-        _cpfError = 'CPF inválido';
+        _cpfError = context.l10n('invalid_cpf');
       } else {
         _cpfError = null;
       }
@@ -229,9 +210,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         _confirmarSenhaError != null ||
         !_aceitouTermos) {
       setState(() {
-        _errorMessage = 'Por favor, corrija os erros nos campos destacados.';
+        _errorMessage = context.l10n('fix_errors');
         if (!_aceitouTermos) {
-          _errorMessage = 'É necessário aceitar os termos e condições.';
+          _errorMessage = context.l10n('accept_terms_error');
         }
       });
       return;
@@ -241,48 +222,34 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final senha = _senhaController.text;
     final telefone = _telefoneController.text.trim();
     final nome = _nomeController.text.trim();
+    final cpf = _cpfController.text.trim();
 
     setState(() {
       _errorMessage = null;
     });
 
     try {
+      debugPrint('RegisterScreen: Iniciando processo de cadastro para $email');
       await ref.read(authProvider.notifier).register(
         email: email,
         password: senha,
         nome: nome,
         telefone: telefone,
+        cpf: cpf,
       );
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Cadastro realizado com sucesso!'),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
-      ));
-
-      // Redireciona para a tela inicial após um breve atraso
-      await Future.delayed(const Duration(milliseconds: 700));
-      if (!mounted) return;
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const DashboardScreen()),
-      );
-    } catch (e) {
-      if (!mounted) return;
+      debugPrint('RegisterScreen: register concluído com sucesso');
       
-      String errorMessage = 'Erro ao processar o cadastro. Tente novamente.';
-      if (e is AuthException) {
-        errorMessage = e.message;
-      } else {
-        errorMessage = e.toString();
+      if (!mounted) {
+        debugPrint('RegisterScreen: Widget não está mais montado (root mudou)');
+        return;
       }
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
-      );
+      // Ao cadastrar com sucesso, limpamos a pilha e vamos para a Home
+      debugPrint('RegisterScreen: Executando navegação de fallback');
+      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+    } catch (e) {
+      debugPrint('RegisterScreen: Erro capturado no _register: $e');
+      // Erro tratado pelo ref.listen
     }
   }
 
@@ -290,14 +257,39 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
 
+    // Escuta erros de autenticação para exibir mensagens premium
+    ref.listen(authProvider, (previous, next) {
+      next.whenOrNull(
+        error: (error, stack) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.white),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      error.toString(),
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.redAccent,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              margin: const EdgeInsets.all(16),
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        },
+      );
+    });
+
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: AppColors.primaryGradient,
-          ),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
         ),
         child: SafeArea(
           child: Center(
@@ -315,21 +307,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       children: [
                         const Icon(Icons.person_add_outlined, size: 64, color: AppColors.primary),
                         const SizedBox(height: 16),
-                        const Text(
-                          'Criar Conta',
-                          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        Text(
+                          context.l10n('register'),
+                          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
-                        const Text(
-                          'Preencha seus dados para começar',
-                          style: TextStyle(color: AppColors.textSecondary),
+                        Text(
+                          context.l10n('register_subtitle'),
+                          style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
                         ),
                         const SizedBox(height: 32),
                         
                         _buildTextField(
                           controller: _nomeController,
-                          label: 'Nome Completo',
-                          hint: 'Como no seu RG/CNH',
+                          label: context.l10n('full_name'),
+                          hint: context.l10n('full_name_hint'),
                           icon: Icons.person_outline,
                           errorText: _nomeError,
                           textCapitalization: TextCapitalization.words,
@@ -355,7 +347,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             Expanded(
                               child: _buildTextField(
                                 controller: _telefoneController,
-                                label: 'Telefone',
+                                label: context.l10n('phone'),
                                 hint: '(00) 00000-0000',
                                 icon: Icons.phone_outlined,
                                 errorText: _telefoneError,
@@ -370,7 +362,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
                         _buildTextField(
                           controller: _emailController,
-                          label: 'E-mail',
+                          label: context.l10n('email'),
                           hint: 'seu@email.com',
                           icon: Icons.email_outlined,
                           errorText: _emailError,
@@ -381,7 +373,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
                         _buildTextField(
                           controller: _senhaController,
-                          label: 'Senha',
+                          label: context.l10n('password'),
                           hint: '••••••••',
                           icon: Icons.lock_outline,
                           obscureText: _obscurePassword,
@@ -396,7 +388,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
                         _buildTextField(
                           controller: _confirmarSenhaController,
-                          label: 'Confirmar Senha',
+                          label: context.l10n('confirm_password'),
                           hint: '••••••••',
                           icon: Icons.lock_reset,
                           obscureText: _obscureConfirmPassword,
@@ -412,9 +404,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         CheckboxListTile(
                           value: _aceitouTermos,
                           onChanged: (val) => setState(() => _aceitouTermos = val ?? false),
-                          title: const Text(
-                            'Aceito os termos de uso e política de privacidade',
-                            style: TextStyle(fontSize: 12),
+                          title: Text(
+                            context.l10n('accept_terms'),
+                            style: const TextStyle(fontSize: 12),
                           ),
                           controlAffinity: ListTileControlAffinity.leading,
                           contentPadding: EdgeInsets.zero,
@@ -439,14 +431,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           child: ElevatedButton(
                             onPressed: authState.isLoading ? null : _register,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.black,
+                              backgroundColor: Theme.of(context).primaryColor,
+                              foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                               elevation: 4,
                             ),
                             child: authState.isLoading
                                 ? const CircularProgressIndicator(color: Colors.black)
-                                : const Text('CRIAR CONTA', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                : Text(context.l10n('register').toUpperCase(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                           ),
                         ),
                         
@@ -454,7 +446,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         
                         TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text('Já tenho uma conta. Fazer Login', style: TextStyle(color: AppColors.primary)),
+                          child: Text('${context.l10n('already_account')} ${context.l10n('login')}', style: const TextStyle(color: AppColors.primary)),
                         ),
                       ],
                     ),
@@ -480,8 +472,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     List<dynamic>? inputFormatters,
     TextCapitalization textCapitalization = TextCapitalization.none,
   }) {
-    final colorScheme = Theme.of(context).colorScheme;
-    
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
@@ -491,17 +481,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        prefixIcon: Icon(icon, color: AppColors.primary.withOpacity(0.7)),
+        prefixIcon: Icon(icon, color: AppColors.primary.withValues(alpha: 0.7)),
         suffixIcon: suffixIcon,
         errorText: errorText,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.divider),
+          borderSide: BorderSide(color: Theme.of(context).dividerColor),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+          borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
         ),
       ),
     );

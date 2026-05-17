@@ -34,6 +34,20 @@ class DesignSystem {
         elevation: 0,
         centerTitle: true,
       ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primary,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          textStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            inherit: true,
+          ),
+        ),
+      ),
     );
   }
 
@@ -57,49 +71,66 @@ class DesignSystem {
           color: textPrimary,
           fontWeight: FontWeight.bold,
           fontSize: 32,
+          letterSpacing: -0.5,
         ),
         headlineMedium: GoogleFonts.outfit(
           color: textPrimary,
           fontWeight: FontWeight.w600,
           fontSize: 24,
+          letterSpacing: -0.5,
         ),
         bodyLarge: GoogleFonts.inter(
           color: textPrimary,
           fontSize: 16,
+          letterSpacing: 0.2,
         ),
         bodyMedium: GoogleFonts.inter(
           color: textSecondary,
           fontSize: 14,
+          letterSpacing: 0.1,
         ),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: background,
         elevation: 0,
-        centerTitle: true,
+        centerTitle: false, // Minimalist look usually aligns title to the left
         titleTextStyle: TextStyle(
           color: textPrimary,
-          fontSize: 20,
+          fontSize: 22,
           fontWeight: FontWeight.bold,
+          letterSpacing: -0.5,
         ),
       ),
       cardTheme: CardThemeData(
         color: surface,
-        elevation: 4,
+        elevation: 0, // Minimalist = flat or subtle borders
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(24), // Larger radius for modern look
+          side: BorderSide(color: AppColors.divider.withValues(alpha: 0.5), width: 1),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primary,
-          foregroundColor: Colors.white,
-          minimumSize: const Size(double.infinity, 56),
+          foregroundColor: Colors.black, // Dark text on primary for better contrast
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
           textStyle: GoogleFonts.inter(
             fontWeight: FontWeight.bold,
             fontSize: 16,
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: textPrimary,
+          side: const BorderSide(color: AppColors.divider),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
       ),

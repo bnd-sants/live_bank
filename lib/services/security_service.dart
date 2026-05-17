@@ -36,7 +36,10 @@ class SecurityService {
       // Tenta obter um ID de hardware único
       String? deviceIdentifier;
       try {
-        if (Platform.isAndroid) {
+        if (kIsWeb) {
+          // Na web, não tentamos obter ID de hardware específico
+          deviceIdentifier = null;
+        } else if (Platform.isAndroid) {
           var androidInfo = await _deviceInfo.androidInfo;
           deviceIdentifier = androidInfo.id;
         } else if (Platform.isIOS) {
@@ -61,7 +64,9 @@ class SecurityService {
     final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
     String deviceId = '';
     
-    if (Platform.isAndroid) {
+    if (kIsWeb) {
+      deviceId = 'web-session-${DateTime.now().millisecondsSinceEpoch}';
+    } else if (Platform.isAndroid) {
       final androidInfo = await _deviceInfo.androidInfo;
       deviceId = androidInfo.id;
     } else if (Platform.isIOS) {
@@ -69,6 +74,10 @@ class SecurityService {
       deviceId = iosInfo.identifierForVendor ?? '';
     }
 
+    if (kIsWeb) {
+      return sha256.convert(utf8.encode(timestamp + deviceId)).toString();
+    }
+    
     if (Platform.isAndroid) {
       final androidInfo = await _deviceInfo.androidInfo;
       final deviceData = {
@@ -152,6 +161,8 @@ class SecurityService {
       if (currentDeviceId != EncryptionService.decrypt(storedDeviceId)) return false;
 
       // Verificações adicionais de segurança
+      if (kIsWeb) return true;
+      
       if (Platform.isAndroid) {
         final androidInfo = await _deviceInfo.androidInfo;
         if (androidInfo.isPhysicalDevice == false) {

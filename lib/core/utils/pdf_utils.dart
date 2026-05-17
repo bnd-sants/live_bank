@@ -27,26 +27,47 @@ class PdfUtils {
       for (final row in data) {
         pdf.addPage(
           pw.Page(
-            build: (context) => pw.Padding(
-              padding: const pw.EdgeInsets.all(32),
+            pageFormat: PdfPageFormat.a4,
+            build: (context) => pw.Container(
+              padding: const pw.EdgeInsets.all(40),
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Text('Recibo de Transferência', style: pw.TextStyle(font: ttf, fontSize: 22, fontWeight: pw.FontWeight.bold)),
-                  pw.SizedBox(height: 24),
-                  if (row['remetente'] != null)
-                    pw.Text('Remetente: ${row['remetente']}', style: pw.TextStyle(font: ttf, fontSize: 14)),
-                  if (row['destinatario'] != null)
-                    pw.Text('Destinatário: ${row['destinatario']}', style: pw.TextStyle(font: ttf, fontSize: 14)),
-                  if (row['valor'] != null)
-                    pw.Text('Valor: R\$ ${row['valor']}', style: pw.TextStyle(font: ttf, fontSize: 14)),
-                  if (row['data'] != null)
-                    pw.Text('Data: ${row['data']}', style: pw.TextStyle(font: ttf, fontSize: 14)),
-                  if (row['id'] != null)
-                    pw.Text('Código da transação: ${row['id']}', style: pw.TextStyle(font: ttf, fontSize: 12, color: PdfColor.fromInt(0xFF888888))),
-                  pw.SizedBox(height: 24),
-                  pw.Divider(),
-                  pw.Text('Obrigado por usar o LIVE BANK!', style: pw.TextStyle(font: ttf, fontSize: 12, color: PdfColor.fromInt(0xFF888888))),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text('LIVE BANK', style: pw.TextStyle(font: ttf, fontSize: 24, fontWeight: pw.FontWeight.bold, color: PdfColor.fromInt(0xFF00D1FF))),
+                          pw.Text('Comprovante de Transferência', style: pw.TextStyle(font: ttf, fontSize: 10, color: PdfColor.fromInt(0xFF64748B))),
+                        ],
+                      ),
+                      pw.Text(row['data'] ?? 'N/A', style: pw.TextStyle(font: ttf, fontSize: 10, color: PdfColor.fromInt(0xFF64748B))),
+                    ],
+                  ),
+                  pw.SizedBox(height: 60),
+                  pw.Center(
+                    child: pw.Column(
+                      children: [
+                        pw.Text('Valor', style: pw.TextStyle(font: ttf, fontSize: 14, color: PdfColor.fromInt(0xFF64748B))),
+                        pw.SizedBox(height: 8),
+                        pw.Text('R\$ ${row['valor']}', style: pw.TextStyle(font: ttf, fontSize: 42, fontWeight: pw.FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                  pw.SizedBox(height: 60),
+                  _buildPdfRow(ttf, 'Destinatário', row['destinatario'] ?? 'N/A'),
+                  pw.Divider(color: PdfColor.fromInt(0xFFE2E8F0), thickness: 1),
+                  _buildPdfRow(ttf, 'Remetente', row['remetente'] ?? 'N/A'),
+                  pw.Divider(color: PdfColor.fromInt(0xFFE2E8F0), thickness: 1),
+                  _buildPdfRow(ttf, 'ID da Transação', row['id'] ?? 'N/A'),
+                  pw.Divider(color: PdfColor.fromInt(0xFFE2E8F0), thickness: 1),
+                  pw.SizedBox(height: 100),
+                  pw.Center(
+                    child: pw.Text('Este comprovante é válido como documento fiscal.', 
+                      style: pw.TextStyle(font: ttf, fontSize: 8, color: PdfColor.fromInt(0xFF94A3B8))),
+                  ),
                 ],
               ),
             ),
@@ -69,5 +90,22 @@ class PdfUtils {
       );
     }
     return pdf.save();
+  }
+
+  static pw.Widget _buildPdfRow(pw.Font font, String label, String value) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(vertical: 12),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(label, style: pw.TextStyle(font: font, fontSize: 12, color: PdfColor.fromInt(0xFF64748B))),
+          pw.Flexible(
+            child: pw.Text(value, 
+              textAlign: pw.TextAlign.right,
+              style: pw.TextStyle(font: font, fontSize: 14, fontWeight: pw.FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 }

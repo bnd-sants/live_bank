@@ -4,9 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_bank/core/theme/app_colors.dart';
 import 'package:live_bank/features/transactions/data/repositories/transaction_repository.dart';
 import 'package:live_bank/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:live_bank/features/transactions/presentation/providers/transactions_provider.dart';
 import 'receipt_screen.dart';
 import 'package:live_bank/widgets/secure_screen.dart';
+import 'package:live_bank/core/l10n/app_localizations.dart';
 
 class TransferScreen extends ConsumerStatefulWidget {
   const TransferScreen({super.key});
@@ -116,6 +116,7 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
                 data: formattedDate,
                 moeda: 'BRL',
                 valorOriginal: valor,
+                transactionId: data['transaction_id'],
               ),
             ),
           );
@@ -139,7 +140,7 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
     return SecureScreen(
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Transferência PIX'),
+          title: Text(context.l10n('transfer')),
           backgroundColor: Colors.transparent,
           elevation: 0,
         ),
@@ -162,7 +163,7 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
                   ),
                   textAlign: TextAlign.center,
                   decoration: InputDecoration(
-                    labelText: 'Quanto deseja transferir?',
+                    labelText: context.l10n('amount_to_transfer'),
                     prefixText: 'R\$ ',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -177,12 +178,12 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
                     _RealInputFormatter(),
                   ],
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Informe o valor';
+                    if (value == null || value.isEmpty) return context.l10n('inform_amount');
                     final valor = double.tryParse(value.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
-                    if (valor < 50) return 'Mínimo R\$ 0,50';
+                    if (valor < 50) return context.l10n('min_amount_error');
                     
                     final currentBalance = balanceAsync.asData?.value ?? 0;
-                    if (valor / 100 > currentBalance) return 'Saldo insuficiente';
+                    if (valor / 100 > currentBalance) return context.l10n('insufficient_balance');
                     return null;
                   },
                 ),
@@ -248,8 +249,8 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
                   keyboardType: _getKeyboardType(),
                   onFieldSubmitted: (_) => _searchRecipient(),
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Informe o destinatário';
-                    if (_recipientAccount == null) return 'Busque um destinatário válido';
+                    if (value == null || value.isEmpty) return context.l10n('inform_recipient');
+                    if (_recipientAccount == null) return context.l10n('invalid_recipient');
                     return null;
                   },
                 ),
@@ -277,7 +278,7 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
                   ),
                   child: _isLoading
                       ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                      : const Text('Confirmar Transferência', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      : Text(context.l10n('confirm_transfer'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -291,7 +292,7 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
     return balanceAsync.when(
       data: (balance) => Column(
         children: [
-          Text('Saldo disponível', style: TextStyle(color: Colors.grey[500])),
+          Text(context.l10n('balance'), style: TextStyle(color: Colors.grey[500])),
           const SizedBox(height: 4),
           Text(
             'R\$ ${balance.toStringAsFixed(2)}',
@@ -308,9 +309,9 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.1),
+        color: AppColors.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -357,9 +358,9 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
 
   String _getRecipientFieldLabel() {
     switch (_selectedPixType) {
-      case 'cpf': return 'CPF do destinatário';
-      case 'email': return 'E-mail do destinatário';
-      case 'celular': return 'Celular do destinatário';
+      case 'cpf': return context.l10n('cpf_label');
+      case 'email': return context.l10n('email_label');
+      case 'celular': return context.l10n('phone_label');
       default: return 'Chave PIX';
     }
   }

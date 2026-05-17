@@ -1,17 +1,21 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:live_bank/core/utils/csv_utils.dart';
-import 'package:live_bank/core/utils/pdf_utils.dart';
+import 'package:live_bank/services/pdf_service.dart';
+import 'package:live_bank/services/biometric_service.dart';
+import 'package:live_bank/core/utils/file_helper.dart';
 import 'package:live_bank/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:live_bank/features/transactions/domain/models/transaction_model.dart';
+import 'package:live_bank/features/auth/presentation/providers/auth_provider.dart';
 import '../widgets/dashboard_widgets.dart';
+import '../widgets/shimmer_loading.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:live_bank/core/theme/app_colors.dart';
+import 'package:live_bank/core/l10n/app_localizations.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -48,15 +52,31 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     'Linha': true,
     'Pizza': true,
   };
+  bool _biometricEnabled = false;
+  bool _biometricAvailable = false;
+  final BiometricService _biometricService = BiometricService();
 
   final FlutterLocalNotificationsPlugin notificationsPlugin = FlutterLocalNotificationsPlugin();
+  bool _notificationsInitialized = false;
 
   @override
   void initState() {
     super.initState();
     _loadCustomizationPreferences();
     _initializeNotifications().then((_) => _checkBalanceAndNotify());
+    _checkBiometricAvailability();
     _scrollController.addListener(_onScroll);
+  }
+
+  Future<void> _checkBiometricAvailability() async {
+    final available = await _biometricService.isBiometricAvailable();
+    final enabled = await _biometricService.isBiometricEnabled();
+    if (mounted) {
+      setState(() {
+        _biometricAvailable = available;
+        _biometricEnabled = enabled;
+      });
+    }
   }
 
   @override
@@ -66,29 +86,64 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Future<void> _initializeNotifications() async {
-    const AndroidInitializationSettings androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const InitializationSettings initSettings = InitializationSettings(android: androidInit);
-    await notificationsPlugin.initialize(initSettings);
+    // Na Web ou se não for uma plataforma suportada, não inicializamos
+    if (kIsWeb) {
+      _notificationsInitialized = false;
+      return;
+    }
+    
+    try {
+      // Configuramos apenas Android por enquanto, pois o plugin pode ter 
+      // limitações em outras plataformas dependendo da configuração do projeto.
+      // Se for Windows ou macOS, o plugin pode exigir configurações extras.
+      if (Platform.isAndroid) {
+        const AndroidInitializationSettings androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+        const InitializationSettings initSettings = InitializationSettings(
+          android: androidInit,
+        );
+        await notificationsPlugin.initialize(initSettings);
+        _notificationsInitialized = true;
+      } else {
+        _notificationsInitialized = false;
+      }
+    } catch (e) {
+      debugPrint('Erro ao inicializar notificações: $e');
+      _notificationsInitialized = false;
+    }
   }
 
   Future<void> _checkBalanceAndNotify() async {
-    final balance = ref.read(balanceProvider).value ?? 0.0;
-    if (balance < 100) {
-      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-        'low_balance',
-        'Saldo Baixo',
-        channelDescription: 'Notificações de saldo baixo',
-        importance: Importance.max,
-        priority: Priority.high,
-      );
-      const NotificationDetails notificationDetails = NotificationDetails(android: androidDetails);
+    if (!_notificationsInitialized || kIsWeb) return;
+
+    try {
+      final balanceValue = ref.read(balanceProvider);
       
-      await notificationsPlugin.show(
-        0,
-        'Atenção: Saldo Baixo',
-        'Seu saldo está abaixo de R\$ 100,00. Considere realizar um depósito.',
-        notificationDetails,
-      );
+      // Se houver erro no provider (ex: sessão expirada), não tentamos mostrar notificação
+      if (balanceValue.hasError) return;
+
+      final balance = balanceValue.value ?? 0.0;
+      
+      if (balance > 1000) {
+        const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+          'balance_channel',
+          'Saldo',
+          importance: Importance.max,
+          priority: Priority.high,
+        );
+        
+        const NotificationDetails platformDetails = NotificationDetails(
+          android: androidDetails,
+        );
+
+        await notificationsPlugin.show(
+          0,
+          'Saldo em Conta',
+          'Seu saldo atual é de R\$ ${balance.toStringAsFixed(2)}',
+          platformDetails,
+        );
+      }
+    } catch (e) {
+      debugPrint('Erro ao mostrar notificação: $e');
     }
   }
 
@@ -144,6 +199,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     });
   }
 
+  Future<void> _toggleBalance() async {
+    if (!_showBalance && _biometricEnabled) {
+      final authenticated = await _biometricService.authenticate(
+        localizedReason: 'Autentique-se para visualizar seu saldo',
+      );
+      if (!authenticated) return;
+    }
+    
+    setState(() {
+      _showBalance = !_showBalance;
+    });
+  }
+
   List<TransactionModel> _getFilteredHistory(List<TransactionModel> history) {
     return history.where((item) {
       if (_recipientFilter.isNotEmpty && 
@@ -196,19 +264,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Histórico e Dashboard'),
+        title: Text(context.l10n('history')),
         actions: [
           IconButton(
             icon: const Icon(Icons.tune),
             onPressed: () => _showPersonalizationModal(),
           ),
           IconButton(
-            icon: const Icon(Icons.download, color: Colors.blue),
-            onPressed: () => _exportCsv(historyAsync.value ?? []),
-          ),
-          IconButton(
-            icon: const Icon(Icons.picture_as_pdf, color: Colors.red),
-            onPressed: () => _exportPdf(historyAsync.value ?? []),
+            icon: const Icon(Icons.share),
+            onPressed: () => _showShareOptions(historyAsync.value ?? []),
           ),
         ],
       ),
@@ -279,10 +343,47 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               formatDate: (d) => DateFormat('dd/MM/yyyy HH:mm').format(d),
             ),
             showTransactions: _showTransactions,
+            showBalance: _showBalance,
+            onToggleBalance: _toggleBalance,
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Erro ao carregar dados: $err')),
+        loading: () => const ShimmerLoading(),
+        error: (err, stack) {
+          final isAuthError = err.toString().contains('Sessão expirada') || 
+                             err.toString().contains('Unauthorized') ||
+                             err.toString().contains('AuthFailure');
+          
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                   Text(
+                    isAuthError ? context.l10n('session_expired') : context.l10n('error_loading_data'),
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(err.toString(), textAlign: TextAlign.center),
+                  const SizedBox(height: 24),
+                  if (isAuthError)
+                    ElevatedButton.icon(
+                       onPressed: () => ref.read(authProvider.notifier).signOut(),
+                       icon: const Icon(Icons.logout),
+                       label: Text(context.l10n('login_again')),
+                    )
+                  else
+                    ElevatedButton(
+                      onPressed: () => ref.refresh(transactionsProvider),
+                      child: Text(context.l10n('try_again')),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -303,34 +404,83 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       case 'Barra':
         return BarChart(
           BarChartData(
+            gridData: const FlGridData(show: false),
+            borderData: FlBorderData(show: false),
+            titlesData: const FlTitlesData(
+              show: true,
+              topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            ),
             barGroups: List.generate(monthlyValues.length, (i) => BarChartGroupData(
               x: i,
-              barRods: [BarChartRodData(toY: monthlyValues[i], color: Colors.blue)],
+              barRods: [
+                BarChartRodData(
+                  toY: monthlyValues[i], 
+                  color: AppColors.primary,
+                  width: 20,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                  gradient: LinearGradient(
+                    colors: [AppColors.primary, AppColors.secondary],
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                  ),
+                )
+              ],
             )),
-            titlesData: const FlTitlesData(show: true),
           ),
         );
       case 'Linha':
         return LineChart(
           LineChartData(
-            lineBarsData: [LineChartBarData(
-              spots: List.generate(monthlyValues.length, (i) => FlSpot(i.toDouble(), monthlyValues[i])),
-              color: Colors.green,
-            )],
+            gridData: const FlGridData(show: false),
+            borderData: FlBorderData(show: false),
+            titlesData: const FlTitlesData(
+              show: true,
+              topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            ),
+            lineBarsData: [
+              LineChartBarData(
+                isCurved: true,
+                curveSmoothness: 0.35,
+                preventCurveOverShooting: true,
+                spots: List.generate(monthlyValues.length, (i) => FlSpot(i.toDouble(), monthlyValues[i])),
+                color: AppColors.primary,
+                barWidth: 4,
+                isStrokeCapRound: true,
+                dotData: const FlDotData(show: false),
+                belowBarData: BarAreaData(
+                  show: true,
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary.withValues(alpha: 0.3),
+                      AppColors.primary.withValues(alpha: 0.0),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+              )
+            ],
           ),
         );
       case 'Pizza':
         return PieChart(
           PieChartData(
+            sectionsSpace: 4,
+            centerSpaceRadius: 40,
             sections: List.generate(monthlyValues.length, (i) => PieChartSectionData(
               value: monthlyValues[i],
-              color: Colors.primaries[i % Colors.primaries.length],
-              title: monthlyValues[i] > 0 ? 'M${i+1}' : '',
+              color: Colors.primaries[i % Colors.primaries.length].withValues(alpha: 0.8),
+              title: '', // Minimalist: hide titles on pizza
+              radius: 50,
             )),
           ),
         );
       default:
-        return const Center(child: Text('Gráfico não disponível'));
+        return Center(child: Text(context.l10n('chart_not_available')));
     }
   }
 
@@ -359,6 +509,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   setState(() => _showTransactions = v);
                 },
               ),
+              if (_biometricAvailable)
+                SwitchListTile(
+                  title: const Text('Autenticação Biométrica'),
+                  subtitle: const Text('Exigir biometria para ações sensíveis'),
+                  value: _biometricEnabled,
+                  onChanged: (v) async {
+                    final success = await _biometricService.setBiometricEnabled(v);
+                    if (success) {
+                      setModalState(() => _biometricEnabled = v);
+                      setState(() => _biometricEnabled = v);
+                    }
+                  },
+                ),
+              const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {
                   _saveCustomizationPreferences();
@@ -373,35 +537,120 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Future<void> _exportCsv(List<TransactionModel> history) async {
-    final csvData = history.map((t) => {
-      'id': t.id,
-      'description': t.description,
-      'amount': t.amount,
-      'date': t.date.toIso8601String(),
-      'type': t.type,
-    }).toList();
-    final csv = CsvUtils.toCsv(csvData);
-    await Share.share(csv, subject: 'Histórico Live Bank');
+  void _showShareOptions(List<TransactionModel> history) {
+    if (history.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não há transações para exportar.')),
+      );
+      return;
+    }
+    
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text('Compartilhar Histórico', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ),
+              ListTile(
+                leading: const Icon(Icons.text_snippet, color: Colors.blue),
+                title: const Text('Compartilhar como Texto (CSV)'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  if (_biometricEnabled) {
+                    final authenticated = await _biometricService.authenticate(
+                      localizedReason: 'Autentique-se para exportar seu histórico',
+                    );
+                    if (!authenticated) return;
+                  }
+                  _exportCsv(history);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.picture_as_pdf, color: Colors.red),
+                title: const Text('Compartilhar como PDF'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  if (_biometricEnabled) {
+                    final authenticated = await _biometricService.authenticate(
+                      localizedReason: 'Autentique-se para exportar seu histórico',
+                    );
+                    if (!authenticated) return;
+                  }
+                  _exportPdf(history);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
+  Future<void> _exportCsv(List<TransactionModel> history) async {
+    final csvData = [
+      [
+        context.l10n('date'),
+        context.l10n('pdf_description'),
+        context.l10n('value'),
+        context.l10n('type')
+      ],
+      ...history.map((t) => [
+            DateFormat('dd/MM/yyyy HH:mm').format(t.date),
+            t.description,
+            t.amount.toStringAsFixed(2),
+            t.type == 'credit' ? context.l10n('credit') : context.l10n('debit')
+          ]),
+    ];
+
+    final bytes = Uint8List.fromList(
+        csvData.map((row) => row.join(',')).join('\n').codeUnits);
+
+    await FileHelper.saveAndShare(
+      bytes,
+      'historico_${DateTime.now().millisecondsSinceEpoch}.csv',
+      subject: context.l10n('share_history_csv_subject'),
+      text: context.l10n('share_history_csv_text'),
+    );
+  }
+ 
   Future<void> _exportPdf(List<TransactionModel> history) async {
-    final csvData = history.map((t) => {
-      'id': t.id,
-      'description': t.description,
-      'amount': t.amount,
-      'date': t.date.toIso8601String(),
-      'type': t.type,
-    }).toList();
     try {
-      final pdfBytes = await PdfUtils.toPdf(csvData);
-      final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/historico_${DateTime.now().millisecondsSinceEpoch}.pdf');
-      await file.writeAsBytes(pdfBytes);
-      await Share.shareXFiles([XFile(file.path)], subject: 'Histórico Live Bank PDF');
+      final user = ref.read(sessionStateProvider).value;
+      final userName = user?.userMetadata?['nome'] ?? context.l10n('default_user_name');
+      
+      final pdfService = PdfService();
+      final l10n = {
+        'pdf_history_title': context.l10n('pdf_history_title'),
+        'pdf_client': context.l10n('pdf_client'),
+        'pdf_issue_date': context.l10n('pdf_issue_date'),
+        'date': context.l10n('date'),
+        'pdf_description': context.l10n('pdf_description'),
+        'type': context.l10n('type'),
+        'pdf_value_brl': context.l10n('pdf_value_brl'),
+        'credit': context.l10n('credit'),
+        'debit': context.l10n('debit'),
+      };
+      
+      final subject = context.l10n('share_history_pdf_subject');
+      final text = context.l10n('share_history_pdf_text');
+      
+      final bytes = await pdfService.generateHistoryPdf(history, userName, l10n);
+      
+      await FileHelper.saveAndShare(
+        bytes,
+        'historico_${DateTime.now().millisecondsSinceEpoch}.pdf',
+        subject: subject,
+        text: text,
+      );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao gerar PDF: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${context.l10n('error_generating_pdf')}: $e')));
       }
     }
   }

@@ -29,8 +29,8 @@ if (flutterVersionName == null) {
 
 android {
     namespace "com.livebank.app"
-    compileSdkVersion 35
-    ndkVersion "27.0.12077973"
+    compileSdkVersion 36
+    ndkVersion "28.2.13676358"
     
     // Configuração da toolchain do Kotlin
     kotlin {
@@ -49,32 +49,13 @@ android {
     }
     
     defaultConfig {
-        // Configuração de ABI removida para evitar conflito com splits
+        applicationId "com.livebank.app"
+        minSdkVersion flutter.minSdkVersion
+        targetSdkVersion 36
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
         
-        // Habilita o core library desugaring
         multiDexEnabled true
-        
-        // Configuração de versão mínima do Android
-        minSdkVersion 21
-        
-        // Configuração de versão alvo do Android
-        targetSdkVersion 34
-        
-        // Configuração de versão de compilação
-        compileSdkVersion 35
-        
-        // Configuração de versão do ndk
-        
-        // Configuração de versão do Java
-        compileOptions {
-            sourceCompatibility JavaVersion.VERSION_17
-            targetCompatibility JavaVersion.VERSION_17
-        }
-        
-        // Configuração de versão do Kotlin
-        kotlinOptions {
-            jvmTarget = '17'
-        }
     }
     
     // Configurações de compilação Java
@@ -95,16 +76,6 @@ android {
         main.java.srcDirs += 'src/main/kotlin'
     }
 
-    defaultConfig {
-        applicationId "com.livebank.app"
-        minSdkVersion flutter.minSdkVersion
-        targetSdkVersion flutter.targetSdkVersion
-        versionCode flutterVersionCode.toInteger()
-        versionName flutterVersionName
-        
-        // Habilitar multidex para evitar problemas com limite de métodos
-        multiDexEnabled true
-    }
 
     buildTypes {
         release {
@@ -162,14 +133,9 @@ configurations.all {
         force 'androidx.annotation:annotation:1.8.0'
         force 'androidx.core:core:1.13.1'
         force 'androidx.core:core-ktx:1.13.1'
-        force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.22'
-        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22'
         force 'androidx.arch.core:core-common:2.2.0'
         force 'androidx.profileinstaller:profileinstaller:1.3.1'
         force 'androidx.collection:collection:1.1.0'
-        
-        // Desativa a verificação de versão transitiva para evitar conflitos
-        failOnVersionConflict()
         
         // Configura a estratégia de resolução para pegar a versão mais recente em caso de conflito
         preferProjectModules()

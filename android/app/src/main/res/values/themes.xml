@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Tema base da aplicação -->
-    <style name="Theme.UrubuDoPix" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Theme.LiveBank" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <!-- Cores primárias -->
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
@@ -54,7 +54,7 @@
     </style>
     
     <!-- Tema de lançamento -->
-    <style name="LaunchTheme" parent="Theme.UrubuDoPix">
+    <style name="LaunchTheme" parent="Theme.LiveBank">
         <item name="android:windowBackground">@drawable/launch_background</item>
         <item name="android:windowFullscreen">true</item>
         <item name="android:windowContentOverlay">@null</item>
@@ -65,7 +65,7 @@
     </style>
     
     <!-- Tema normal -->
-    <style name="NormalTheme" parent="Theme.UrubuDoPix">
+    <style name="NormalTheme" parent="Theme.LiveBank">
         <item name="android:windowBackground">@color/background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@color/navigationBar</item>
@@ -74,7 +74,7 @@
     </style>
     
     <!-- Tema para diálogos -->
-    <style name="Theme.UrubuDoPix.Dialog" parent="ThemeOverlay.MaterialComponents.Dialog.Alert">
+    <style name="Theme.LiveBank.Dialog" parent="ThemeOverlay.MaterialComponents.Dialog.Alert">
         <item name="android:windowBackground">@color/backgroundCard</item>
         <item name="colorSurface">@color/backgroundCard</item>
         <item name="colorOnSurface">@color/textPrimary</item>
@@ -87,7 +87,7 @@
     </style>
     
     <!-- Tema para Toolbar -->
-    <style name="Theme.UrubuDoPix.Toolbar" parent="Widget.MaterialComponents.Toolbar.Primary">
+    <style name="Theme.LiveBank.Toolbar" parent="Widget.MaterialComponents.Toolbar.Primary">
         <item name="android:background">@color/colorPrimary</item>
         <item name="titleTextColor">@color/colorOnPrimary</item>
         <item name="subtitleTextColor">@color/colorOnPrimary</item>
@@ -96,7 +96,7 @@
     </style>
     
     <!-- Tema para Cards -->
-    <style name="Theme.UrubuDoPix.Card" parent="Widget.MaterialComponents.Card">
+    <style name="Theme.LiveBank.Card" parent="Widget.MaterialComponents.Card">
         <item name="cardBackgroundColor">@color/backgroundCard</item>
         <item name="cardElevation">2dp</item>
         <item name="cardCornerRadius">8dp</item>
@@ -105,7 +105,7 @@
     </style>
     
     <!-- Tema para botões -->
-    <style name="Theme.UrubuDoPix.Button" parent="Widget.MaterialComponents.Button">
+    <style name="Theme.LiveBank.Button" parent="Widget.MaterialComponents.Button">
         <item name="android:textColor">@color/colorOnPrimary</item>
         <item name="backgroundTint">@color/colorPrimary</item>
         <item name="cornerRadius">8dp</item>
@@ -114,7 +114,7 @@
     </style>
     
     <!-- Tema para campos de texto -->
-    <style name="Theme.UrubuDoPix.TextInputLayout" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+    <style name="Theme.LiveBank.TextInputLayout" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
         <item name="boxStrokeColor">@color/colorPrimary</item>
         <item name="boxStrokeWidth">1dp</item>
         <item name="boxCornerRadiusTopStart">8dp</item>
@@ -127,47 +127,47 @@
     </style>
     
     <!-- Tema para CheckBox -->
-    <style name="Theme.UrubuDoPix.CheckBox" parent="Widget.MaterialComponents.CompoundButton.CheckBox">
+    <style name="Theme.LiveBank.CheckBox" parent="Widget.MaterialComponents.CompoundButton.CheckBox">
         <item name="buttonTint">@color/colorPrimary</item>
         <item name="android:textColor">@color/textPrimary</item>
     </style>
     
     <!-- Tema para RadioButton -->
-    <style name="Theme.UrubuDoPix.RadioButton" parent="Widget.MaterialComponents.CompoundButton.RadioButton">
+    <style name="Theme.LiveBank.RadioButton" parent="Widget.MaterialComponents.CompoundButton.RadioButton">
         <item name="buttonTint">@color/colorPrimary</item>
         <item name="android:textColor">@color/textPrimary</item>
     </style>
     
     <!-- Tema para Switch -->
-    <style name="Theme.UrubuDoPix.Switch" parent="Widget.MaterialComponents.CompoundButton.Switch">
+    <style name="Theme.LiveBank.Switch" parent="Widget.MaterialComponents.CompoundButton.Switch">
         <item name="useMaterialThemeColors">true</item>
         <item name="thumbTint">@color/colorPrimary</item>
         <item name="trackTint">@color/colorPrimaryLight</item>
     </style>
     
     <!-- Tema para SeekBar -->
-    <style name="Theme.UrubuDoPix.SeekBar" parent="Widget.MaterialComponents.SeekBar">
+    <style name="Theme.LiveBank.SeekBar" parent="Widget.MaterialComponents.SeekBar">
         <item name="android:progressTint">@color/colorPrimary</item>
         <item name="android:progressBackgroundTint">@color/colorPrimaryLight</item>
         <item name="android:thumbTint">@color/colorPrimary</item>
     </style>
     
     <!-- Tema para ProgressBar -->
-    <style name="Theme.UrubuDoPix.ProgressBar" parent="Widget.MaterialComponents.ProgressIndicator">
+    <style name="Theme.LiveBank.ProgressBar" parent="Widget.MaterialComponents.ProgressIndicator">
         <item name="indicatorColor">@color/colorPrimary</item>
         <item name="trackColor">@color/colorPrimaryLight</item>
         <item name="trackThickness">4dp</item>
     </style>
     
     <!-- Tema para Snackbar -->
-    <style name="Theme.UrubuDoPix.Snackbar" parent="Widget.MaterialComponents.Snackbar">
+    <style name="Theme.LiveBank.Snackbar" parent="Widget.MaterialComponents.Snackbar">
         <item name="android:background">@color/colorPrimary</item>
         <item name="android:textColor">@color/colorOnPrimary</item>
         <item name="actionTextColor">@color/colorAccent</item>
     </style>
     
     <!-- Tema para Tooltip -->
-    <style name="Theme.UrubuDoPix.Tooltip" parent="ThemeOverlay.MaterialComponents.Tooltip">
+    <style name="Theme.LiveBank.Tooltip" parent="ThemeOverlay.MaterialComponents.Tooltip">
         <item name="android:background">@color/colorPrimary</item>
         <item name="android:textColor">@color/colorOnPrimary</item>
     </style>

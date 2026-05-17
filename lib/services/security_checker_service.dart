@@ -36,6 +36,10 @@ class SecurityCheckerService {
     }
 
     try {
+      if (kIsWeb) {
+        return result;
+      }
+      
       if (Platform.isAndroid) {
         result.isEmulator = await _isEmulator();
         result.isRooted = await _isDeviceRooted();
@@ -56,6 +60,8 @@ class SecurityCheckerService {
 
   // Verifica se é um emulador
   Future<bool> _isEmulator() async {
+    if (kIsWeb) return false;
+    
     if (Platform.isAndroid) {
       final androidInfo = await _deviceInfo.androidInfo;
       return !androidInfo.isPhysicalDevice ||
@@ -70,6 +76,7 @@ class SecurityCheckerService {
 
   // Verifica se o dispositivo Android está rooteado
   Future<bool> _isDeviceRooted() async {
+    if (kIsWeb) return false;
     if (!Platform.isAndroid) return false;
 
     try {
@@ -101,6 +108,7 @@ class SecurityCheckerService {
 
   // Verifica se o dispositivo iOS está jailbroken
   Future<bool> _isDeviceJailbroken() async {
+    if (kIsWeb) return false;
     if (!Platform.isIOS) return false;
 
     try {
@@ -126,6 +134,7 @@ class SecurityCheckerService {
 
   // Verifica se há apps maliciosos instalados
   Future<bool> _hasMaliciousApps() async {
+    if (kIsWeb) return false;
     if (!Platform.isAndroid) return false;
 
     try {

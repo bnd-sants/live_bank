@@ -6,6 +6,7 @@ import 'package:live_bank/core/theme/app_colors.dart';
 import 'package:live_bank/features/investments/presentation/providers/investments_provider.dart';
 import 'package:live_bank/features/investments/domain/models/investment_model.dart';
 import 'package:live_bank/widgets/currency_card.dart';
+import 'package:live_bank/core/l10n/app_localizations.dart';
 
 class InvestmentsScreen extends ConsumerStatefulWidget {
   const InvestmentsScreen({super.key});
@@ -33,23 +34,24 @@ class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen> with Sing
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'Investimentos',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          context.l10n('investments'),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: AppColors.primary,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: AppColors.textSecondary,
-          tabs: const [
-            Tab(text: 'Mercado'),
-            Tab(text: 'Minha Carteira'),
+          indicatorColor: theme.primaryColor,
+          labelColor: theme.primaryColor,
+          unselectedLabelColor: theme.textTheme.bodyMedium?.color,
+          tabs: [
+            Tab(text: context.l10n('market')),
+            Tab(text: context.l10n('my_portfolio')),
           ],
         ),
       ),
@@ -64,6 +66,7 @@ class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen> with Sing
   }
 
   Widget _buildMarketTab() {
+    final theme = Theme.of(context);
     final quotesAsync = ref.watch(quotesProvider);
     final historyAsync = ref.watch(exchangeHistoryProvider);
 
@@ -75,10 +78,10 @@ class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen> with Sing
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text(
-            'Resumo do Mercado',
+          Text(
+            context.l10n('market_summary'),
             style: TextStyle(
-              color: AppColors.textPrimary,
+              color: theme.textTheme.bodyLarge?.color,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
@@ -107,15 +110,15 @@ class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen> with Sing
             ),
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (err, stack) => Center(
-              child: Text('Erro ao carregar cotações: $err', style: const TextStyle(color: AppColors.error)),
+              child: Text('${context.l10n('error_quotes')}: $err', style: TextStyle(color: theme.colorScheme.error)),
             ),
           ),
           const SizedBox(height: 24),
           if (_selectedAsset != null) ...[
             Text(
-              'Histórico - ${_getAssetName(_selectedAsset!)}',
-              style: const TextStyle(
-                color: AppColors.textPrimary,
+              '${context.l10n('history')} - ${_getAssetName(_selectedAsset!)}',
+              style: TextStyle(
+                color: theme.textTheme.bodyLarge?.color,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -125,20 +128,20 @@ class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen> with Sing
               data: (history) {
                 final assetHistory = history[_selectedAsset];
                 if (assetHistory == null || assetHistory.isEmpty) {
-                  return const Center(child: Text('Nenhum histórico disponível', style: TextStyle(color: AppColors.textSecondary)));
+                  return Center(child: Text(context.l10n('no_history'), style: TextStyle(color: theme.textTheme.bodyMedium?.color)));
                 }
                 return Container(
                   height: 200,
                   padding: const EdgeInsets.only(right: 16, top: 16),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: _buildChart(assetHistory),
                 );
               },
               loading: () => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator())),
-              error: (err, stack) => Text('Erro no gráfico: $err', style: const TextStyle(color: AppColors.error)),
+              error: (err, stack) => Text('${context.l10n('error_chart')}: $err', style: TextStyle(color: theme.colorScheme.error)),
             ),
           ],
         ],
@@ -147,6 +150,7 @@ class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen> with Sing
   }
 
   Widget _buildPortfolioTab() {
+    final theme = Theme.of(context);
     final investmentsAsync = ref.watch(investmentsProvider);
 
     return investmentsAsync.when(
@@ -156,21 +160,21 @@ class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen> with Sing
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.pie_chart_outline, size: 64, color: AppColors.textSecondary.withOpacity(0.5)),
+                Icon(Icons.pie_chart_outline, size: 64, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5)),
                 const SizedBox(height: 16),
-                const Text(
-                  'Você ainda não possui investimentos',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 16),
+                Text(
+                  context.l10n('no_investments'),
+                  style: TextStyle(color: theme.textTheme.bodyMedium?.color, fontSize: 16),
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: () => _tabController.animateTo(0),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: theme.primaryColor,
                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text('Explorar Mercado'),
+                  child: Text(context.l10n('explore_market')),
                 ),
               ],
             ),
@@ -184,10 +188,10 @@ class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen> with Sing
           children: [
             _buildPortfolioSummary(totalValue),
             const SizedBox(height: 24),
-            const Text(
-              'Meus Ativos',
+            Text(
+              context.l10n('my_assets'),
               style: TextStyle(
-                color: AppColors.textPrimary,
+                color: theme.textTheme.bodyLarge?.color,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -198,7 +202,7 @@ class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen> with Sing
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Erro: $err', style: const TextStyle(color: AppColors.error))),
+      error: (err, stack) => Center(child: Text('Erro: $err', style: TextStyle(color: theme.colorScheme.error))),
     );
   }
 
@@ -214,7 +218,7 @@ class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen> with Sing
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
+            color: AppColors.primary.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -223,9 +227,9 @@ class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen> with Sing
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Patrimônio Total',
-            style: TextStyle(color: Colors.white70, fontSize: 14),
+          Text(
+            context.l10n('total_assets'),
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
           ),
           const SizedBox(height: 8),
           Text(
@@ -247,8 +251,8 @@ class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen> with Sing
               ),
               const Spacer(),
               Text(
-                'Mês atual',
-                style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
+                context.l10n('current_month'),
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12),
               ),
             ],
           ),
@@ -258,6 +262,7 @@ class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen> with Sing
   }
 
   Widget _buildInvestmentCard(InvestmentModel investment) {
+    final theme = Theme.of(context);
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -266,7 +271,7 @@ class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen> with Sing
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.1),
+            color: AppColors.primary.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(_getAssetIcon(investment.assetName), color: AppColors.primary),
@@ -277,7 +282,7 @@ class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen> with Sing
         ),
         subtitle: Text(
           'Qtde: ${investment.amount.toStringAsFixed(4)}',
-          style: const TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(color: theme.textTheme.bodyMedium?.color),
         ),
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -317,7 +322,7 @@ class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen> with Sing
             dotData: const FlDotData(show: false),
             belowBarData: BarAreaData(
               show: true,
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
             ),
           ),
         ],
@@ -327,8 +332,8 @@ class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen> with Sing
 
   String _getAssetName(String code) {
     switch (code.toUpperCase()) {
-      case 'USD': return 'Dólar Americano';
-      case 'EUR': return 'Euro';
+      case 'USD': return context.l10n('currency_usd');
+      case 'EUR': return context.l10n('currency_eur');
       case 'BTC': return 'Bitcoin';
       case 'ETH': return 'Ethereum';
       default: return code;

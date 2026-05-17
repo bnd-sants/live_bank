@@ -3,11 +3,16 @@ import 'package:live_bank/core/theme/app_colors.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:path_provider/path_provider.dart' as path_provider;
+import 'package:path/path.dart' as p;
 import 'dart:io';
 import 'package:live_bank/features/auth/presentation/providers/auth_provider.dart';
 import 'package:live_bank/features/profile/presentation/providers/profile_provider.dart';
 import 'package:live_bank/core/providers/app_state_provider.dart';
 import 'package:live_bank/core/utils/validators.dart';
+import 'package:live_bank/core/l10n/app_localizations.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -87,13 +92,48 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _pickAndUploadPhoto() async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
+      source: ImageSource.camera, // Mudei para câmera como padrão para testar refinamento
+      imageQuality: 100, // Qualidade máxima aqui, comprimimos depois
     );
     
     if (picked == null) return;
+
+    // 1. Cortar a imagem (Crop)
+    final croppedFile = await ImageCropper().cropImage(
+      sourcePath: picked.path,
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: 'Ajustar Foto',
+          toolbarColor: AppColors.background,
+          toolbarWidgetColor: AppColors.primary,
+          initAspectRatio: CropAspectRatioPreset.square,
+          lockAspectRatio: true,
+          cropStyle: CropStyle.circle,
+        ),
+        IOSUiSettings(
+          title: 'Ajustar Foto',
+          aspectRatioLockEnabled: true,
+          resetAspectRatioEnabled: false,
+        ),
+      ],
+    );
+
+    if (croppedFile == null) return;
+
+    // 2. Comprimir a imagem
+    final tempDir = await path_provider.getTemporaryDirectory();
+    final targetPath = p.join(tempDir.path, "profile_${DateTime.now().millisecondsSinceEpoch}.jpg");
+
+    final compressedFile = await FlutterImageCompress.compressAndGetFile(
+      croppedFile.path,
+      targetPath,
+      quality: 70, // Reduz para 70% para otimização premium
+      format: CompressFormat.jpeg,
+    );
+
+    if (compressedFile == null) return;
     
-    final file = File(picked.path);
+    final file = File(compressedFile.path);
     try {
       await ref.read(profileProvider.notifier).uploadPhoto(file);
       _showSuccessSnackBar('Foto atualizada com sucesso!');
@@ -164,7 +204,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             label,
             style: TextStyle(
               fontSize: 14,
-            color: AppColors.textSecondary,
+            color: Theme.of(context).textTheme.bodyMedium?.color,
             ),
           ),
           const SizedBox(height: 4),
@@ -197,7 +237,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             label + (isRequired ? ' *' : ''),
             style: TextStyle(
               fontSize: 14,
-              color: AppColors.textSecondary,
+              color: Theme.of(context).textTheme.bodyMedium?.color,
             ),
           ),
           const SizedBox(height: 4),
@@ -210,7 +250,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
               errorText: errorText,
-              errorStyle: const TextStyle(fontSize: 12, color: AppColors.error),
+              errorStyle: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.error),
             ),
             keyboardType: isPhone ? TextInputType.phone : TextInputType.text,
             inputFormatters: isPhone
@@ -228,13 +268,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final profileState = ref.watch(profileProvider);
     final appState = ref.watch(appStateProvider);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Perfil'),
+        title: Text(context.l10n('profile')),
         backgroundColor: Colors.transparent,
         actions: [
           profileState.when(
@@ -264,10 +306,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   children: [
                     CircleAvatar(
                       radius: 64,
-                      backgroundColor: AppColors.surface,
+                      backgroundColor: theme.colorScheme.surface,
                       backgroundImage: fotoUrl != null ? NetworkImage(fotoUrl) : null,
                       child: fotoUrl == null
-                          ? const Icon(Icons.person, size: 64, color: AppColors.textSecondary)
+                          ? Icon(Icons.person, size: 64, color: theme.textTheme.bodyMedium?.color)
                           : null,
                     ),
                     if (_isEditing)
@@ -292,33 +334,33 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildInfoRow('CPF', _maskCpf(cpf)),
-                      const Divider(height: 24, color: AppColors.divider),
+                      Divider(height: 24, color: theme.dividerColor),
                       _isEditing
                           ? _buildEditableInfoRow(
-                              label: 'Nome',
+                              label: context.l10n('full_name'),
                               controller: _nomeController,
                               errorText: _nomeError,
                               isRequired: true,
                             )
-                          : _buildInfoRow('Nome', data['nome'] ?? ''),
-                      const Divider(height: 24, color: AppColors.divider),
-                      _buildInfoRow('E-mail', email),
-                      const Divider(height: 24, color: AppColors.divider),
+                          : _buildInfoRow(context.l10n('full_name'), data['nome'] ?? ''),
+                      Divider(height: 24, color: theme.dividerColor),
+                      _buildInfoRow(context.l10n('email'), email),
+                      Divider(height: 24, color: theme.dividerColor),
                       _isEditing
                           ? _buildEditableInfoRow(
-                              label: 'Telefone',
+                              label: context.l10n('phone'),
                               controller: _telefoneController,
                               errorText: _telefoneError,
                               isPhone: true,
                             )
-                          : _buildInfoRow('Telefone', data['telefone'] ?? ''),
+                          : _buildInfoRow(context.l10n('phone'), data['telefone'] ?? ''),
                     ],
                   ),
                 ),
@@ -327,7 +369,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ElevatedButton.icon(
                     onPressed: _saveProfile,
                     icon: const Icon(Icons.save),
-                    label: const Text('Salvar alterações'),
+                    label: Text(context.l10n('save')),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       minimumSize: const Size(double.infinity, 50),
@@ -337,7 +379,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   OutlinedButton.icon(
                     onPressed: () => _toggleEditMode(null),
                     icon: const Icon(Icons.close),
-                    label: const Text('Cancelar'),
+                    label: Text(context.l10n('cancel')),
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(double.infinity, 50),
                     ),
@@ -348,29 +390,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Preferências',
+                      Text(
+                        context.l10n('settings'),
                         style: TextStyle(
                           fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w900,
+                          color: isDark ? Colors.white : Colors.black87,
                         ),
                       ),
                       const SizedBox(height: 16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Row(
+                          Row(
                             children: [
-                              Icon(Icons.color_lens, size: 20, color: AppColors.primary),
-                              SizedBox(width: 8),
-                              Text('Tema do App', style: TextStyle(color: AppColors.textPrimary)),
+                              const Icon(Icons.color_lens, size: 20, color: AppColors.primary),
+                              const SizedBox(width: 8),
+                              Text(context.l10n('theme'), style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
                             ],
                           ),
                           DropdownButton<ThemeMode>(
@@ -401,7 +443,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       const Divider(height: 24, color: AppColors.divider),
                       ListTile(
                         leading: const Icon(Icons.logout, color: Colors.red),
-                        title: const Text('Sair da conta', style: TextStyle(color: Colors.red)),
+                        title: Text(context.l10n('logout'), style: const TextStyle(color: Colors.red)),
                         onTap: () {
                           showDialog(
                             context: context,
@@ -418,7 +460,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                     Navigator.of(context).popUntil((route) => route.isFirst);
                                     ref.read(authProvider.notifier).signOut();
                                   },
-                                  child: const Text('Sair', style: TextStyle(color: Colors.red)),
+                                  child: Text('Sair', style: TextStyle(color: Colors.red)),
                                 ),
                               ],
                             ),

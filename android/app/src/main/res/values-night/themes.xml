@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Tema noturno base da aplicação -->
-    <style name="Theme.UrubuDoPix" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Theme.LiveBank" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <!-- Cores primárias -->
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
@@ -54,7 +54,7 @@
     </style>
     
     <!-- Tema de lançamento noturno -->
-    <style name="LaunchTheme" parent="Theme.UrubuDoPix">
+    <style name="LaunchTheme" parent="Theme.LiveBank">
         <item name="android:windowBackground">@drawable/launch_background</item>
         <item name="android:windowFullscreen">true</item>
         <item name="android:windowContentOverlay">@null</item>
@@ -65,7 +65,7 @@
     </style>
     
     <!-- Tema normal noturno -->
-    <style name="NormalTheme" parent="Theme.UrubuDoPix">
+    <style name="NormalTheme" parent="Theme.LiveBank">
         <item name="android:windowBackground">@color/background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@color/navigationBar</item>
@@ -74,7 +74,7 @@
     </style>
     
     <!-- Tema para diálogos noturno -->
-    <style name="Theme.UrubuDoPix.Dialog" parent="ThemeOverlay.MaterialComponents.Dialog.Alert">
+    <style name="Theme.LiveBank.Dialog" parent="ThemeOverlay.MaterialComponents.Dialog.Alert">
         <item name="android:windowBackground">@color/backgroundCard</item>
         <item name="colorSurface">@color/backgroundCard</item>
         <item name="colorOnSurface">@color/textPrimary</item>

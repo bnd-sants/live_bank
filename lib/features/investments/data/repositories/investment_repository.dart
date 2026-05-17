@@ -92,7 +92,7 @@ class InvestmentRepository {
           'dolar': double.tryParse(data['dolar'].toString()) ?? 5.25,
           'euro': double.tryParse(data['euro'].toString()) ?? 5.70,
           'bitcoin': double.tryParse(data['bitcoin'].toString()) ?? 340000.0,
-          'cdi': 0.1125, // Mock Selic/CDI
+          'cdi': 0.1125,
         });
       }
       

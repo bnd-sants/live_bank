@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:live_bank/core/providers/supabase_provider.dart';
@@ -35,13 +36,43 @@ class AuthRepository {
     }
   }
 
+  /// Verifica se e-mail ou CPF já existem na tabela public.users usando RPC (Security Definer)
+  Future<void> _checkEmailOrCpfConflict(String email, String cpf) async {
+    try {
+      final response = await _supabase.rpc(
+        'check_user_exists',
+        params: {
+          'p_email': email,
+          'p_cpf': cpf,
+        },
+      );
+
+      if (response['exists'] == true) {
+        if (response['field'] == 'email') {
+          throw 'Este e-mail já está em uso';
+        } else if (response['field'] == 'cpf') {
+          throw 'Este CPF já está em uso';
+        }
+      }
+    } catch (e) {
+      // Se for nossa mensagem customizada, repassa
+      if (e is String) rethrow;
+      // Caso contrário, ignora (deixa o Auth ou o Trigger tratar se houver erro real)
+      debugPrint('Erro ao verificar conflitos: $e');
+    }
+  }
+
   Future<AuthResponse> signUp({
     required String email,
     required String password,
     required String nome,
     required String telefone,
+    required String cpf,
   }) async {
     try {
+      // 0. Pré-verificação de conflitos no banco (evita erro genérico do trigger)
+      await _checkEmailOrCpfConflict(email, cpf);
+
       // 1. Criar o usuário no Auth
       final response = await _supabase.auth.signUp(
         email: email,
@@ -49,6 +80,7 @@ class AuthRepository {
         data: {
           'nome': nome,
           'telefone': telefone,
+          'cpf': cpf,
           'tipo_pessoa': 'fisica',
         },
       );
@@ -57,50 +89,13 @@ class AuthRepository {
         throw 'Falha ao criar conta. Tente novamente.';
       }
 
-      // 2. Garantir a criação do perfil na tabela 'users'
-      // Nota: Idealmente isso seria feito via Trigger no Supabase, 
-      // mas mantemos aqui para garantir consistência com a lógica anterior.
-      await _createUserProfile(
-        userId: response.user!.id,
-        email: email,
-        nome: nome,
-        telefone: telefone,
-      );
-
       return response;
     } on AuthException catch (e) {
       throw _handleAuthException(e);
     } catch (e) {
+      // Se for um erro que já tratamos como String, apenas repassa
+      if (e is String) rethrow;
       throw 'Ocorreu um erro inesperado ao criar conta';
-    }
-  }
-
-  Future<void> _createUserProfile({
-    required String userId,
-    required String email,
-    required String nome,
-    required String telefone,
-  }) async {
-    try {
-      await _supabase.from('users').upsert({
-        'user_id': userId,
-        'email': email,
-        'nome': nome,
-        'telefone': telefone,
-        'tipo_pessoa': 'fisica',
-        'updated_at': DateTime.now().toIso8601String(),
-      });
-    } catch (e) {
-      // Retry simples se falhar (ex: delay de propagação do auth)
-      await Future.delayed(const Duration(seconds: 1));
-      await _supabase.from('users').upsert({
-        'user_id': userId,
-        'email': email,
-        'nome': nome,
-        'telefone': telefone,
-        'tipo_pessoa': 'fisica',
-        'updated_at': DateTime.now().toIso8601String(),
-      });
     }
   }
 
@@ -110,6 +105,7 @@ class AuthRepository {
 
   String _handleAuthException(AuthException e) {
     final message = e.message.toLowerCase();
+    
     if (message.contains('invalid login credentials') || 
         message.contains('invalid email or password')) {
       return 'E-mail ou senha incorretos';
@@ -121,6 +117,13 @@ class AuthRepository {
     if (message.contains('email not confirmed')) {
       return 'Por favor, confirme seu e-mail para prosseguir';
     }
+    if (message.contains('database error saving new user')) {
+      return 'Erro ao salvar dados. Verifique se o CPF ou e-mail já estão cadastrados.';
+    }
+    if (message.contains('network error') || message.contains('failed host lookup')) {
+      return 'Erro de conexão. Verifique sua internet.';
+    }
+
     return e.message;
   }
 }

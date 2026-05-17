@@ -9,10 +9,11 @@ class CardsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final cardsAsync = ref.watch(cardsProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Meus Cartões'),
         backgroundColor: Colors.transparent,
@@ -32,7 +33,7 @@ class CardsScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => ref.invalidate(cardsProvider),
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                style: ElevatedButton.styleFrom(backgroundColor: theme.primaryColor),
                 child: const Text('Tentar novamente'),
               ),
             ],
@@ -43,13 +44,14 @@ class CardsScreen extends ConsumerWidget {
         onPressed: () => _showCreateCardDialog(context, ref),
         label: const Text('Novo Cartão Virtual'),
         icon: const Icon(Icons.add_card),
-        backgroundColor: AppColors.primary,
+        backgroundColor: theme.primaryColor,
         foregroundColor: Colors.white,
       ),
     );
   }
 
   Widget _buildEmptyState(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -57,18 +59,18 @@ class CardsScreen extends ConsumerWidget {
           Icon(
             Icons.credit_card_off_outlined,
             size: 80,
-            color: AppColors.textSecondary.withOpacity(0.5),
+            color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'Você ainda não possui cartões virtuais',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge?.color),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Crie um agora para fazer compras online com segurança.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textSecondary),
+            style: TextStyle(color: theme.textTheme.bodyMedium?.color),
           ),
         ],
       ),
@@ -98,7 +100,7 @@ class CardsScreen extends ConsumerWidget {
             colors: card.isLocked
                 ? [AppColors.grey500, AppColors.grey400]
                 : (card.label?.contains('🛒') ?? false)
-                    ? [AppColors.accent, AppColors.accent.withOpacity(0.8)]
+                    ? [AppColors.accent, AppColors.accent.withValues(alpha: 0.8)]
                     : AppColors.primaryGradient,
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -174,7 +176,7 @@ class CardsScreen extends ConsumerWidget {
                         style: TextStyle(color: Colors.white54, fontSize: 10),
                       ),
                       Text(
-                        card.isLocked ? '***' : card.cvv ?? '***',
+                        card.isLocked ? '***' : card.cvv,
                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                       ),
                     ],
@@ -207,6 +209,7 @@ class CardsScreen extends ConsumerWidget {
   }
 
   void _showCreateCardDialog(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final controller = TextEditingController(text: 'Compras Online');
     bool isEcommerce = true;
 
@@ -230,9 +233,9 @@ class CardsScreen extends ConsumerWidget {
               SwitchListTile(
                 value: isEcommerce,
                 onChanged: (val) => setState(() => isEcommerce = val),
-                activeColor: AppColors.primary,
-                title: const Text('Uso em E-commerce', style: TextStyle(color: AppColors.textPrimary)),
-                subtitle: const Text('Adiciona ícone e cor diferenciada para compras online.', style: TextStyle(color: AppColors.textSecondary)),
+                activeThumbColor: theme.primaryColor,
+                title: Text('Uso em E-commerce', style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
+                subtitle: Text('Adiciona ícone e cor diferenciada para compras online.', style: TextStyle(color: theme.textTheme.bodyMedium?.color)),
               ),
             ],
           ),
@@ -249,7 +252,7 @@ class CardsScreen extends ConsumerWidget {
                   Navigator.pop(context);
                 }
               },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              style: ElevatedButton.styleFrom(backgroundColor: theme.primaryColor),
               child: const Text('Criar'),
             ),
           ],

@@ -20,7 +20,7 @@ void main() {
     // Verifica se o CircularProgressIndicator está sendo exibido
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
     // Verifica se o texto de saldo não está visível
-    expect(find.text('R\$ 1000.00'), findsNothing);
+    expect(find.textContaining('1000'), findsNothing);
   });
 
   testWidgets('Exibe mensagem de erro quando error não é nulo', (WidgetTester tester) async {
@@ -42,7 +42,8 @@ void main() {
 
     // Verifica se a mensagem de erro está sendo exibida
     expect(find.text(errorMessage), findsOneWidget);
-    expect(find.byType(Text), findsOneWidget);
+    // Existem dois Text: o do saldo (que pode estar mascarado) e o do erro
+    expect(find.byType(Text), findsNWidgets(2));
   });
 
   testWidgets('Exibe saldo formatado quando visivel é true', (WidgetTester tester) async {
@@ -60,7 +61,8 @@ void main() {
     );
 
     // Verifica se o saldo formatado está visível
-    expect(find.text('R\$ 1234.56'), findsOneWidget);
+    // Usamos find.textContaining para evitar problemas com caracteres de espaço não-quebráveis
+    expect(find.textContaining('1.234,56'), findsOneWidget);
     expect(find.byIcon(Icons.visibility), findsOneWidget);
   });
 
@@ -79,7 +81,7 @@ void main() {
     );
 
     // Verifica se a máscara está sendo exibida
-    expect(find.text('••••••'), findsOneWidget);
+    expect(find.text('R\$ ••••••'), findsOneWidget);
     expect(find.byIcon(Icons.visibility_off), findsOneWidget);
   });
 

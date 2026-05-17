@@ -33,7 +33,9 @@ class SaldoCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'R\$ ${visivel ? NumberFormat.currency(locale: 'pt_BR', symbol: '').format(saldo) : '•••••••'}',
+                    visivel 
+                      ? 'R\$ ${NumberFormat.currency(locale: 'pt_BR', symbol: '').format(saldo).trim()}'
+                      : 'R\$ ••••••',
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,

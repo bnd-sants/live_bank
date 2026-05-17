@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:live_bank/features/transactions/domain/models/transaction_model.dart';
+import 'package:live_bank/features/transactions/presentation/screens/receipt_screen.dart';
+import 'package:live_bank/core/utils/categorization_utils.dart';
+import 'package:live_bank/core/l10n/app_localizations.dart';
 
 class DashboardContent extends StatelessWidget {
   final double balance;
@@ -26,44 +29,59 @@ class DashboardContent extends StatelessWidget {
     required this.filtersWidget,
     required this.historyListWidget,
     required this.showTransactions,
+    this.showBalance = true,
+    this.onToggleBalance,
   });
+
+  final bool showBalance;
+  final VoidCallback? onToggleBalance;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.all(24.0),
       children: [
-        _buildInfoCard(
-          title: 'Saldo atual',
-          value: NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(balance),
-          valueStyle: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+        GestureDetector(
+          onTap: onToggleBalance,
+          child: _buildInfoCard(
+            title: context.l10n('current_balance'),
+            value: showBalance 
+                ? NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(balance)
+                : '••••••',
+            valueStyle: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: -1),
+            icon: showBalance ? Icons.visibility : Icons.visibility_off,
+          ),
         ),
         const SizedBox(height: 24),
         Row(
           children: [
             Expanded(
               child: _buildInfoCard(
-                title: 'Total enviado',
+                title: context.l10n('total_sent'),
                 value: NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(totalSent),
-                valueStyle: const TextStyle(fontSize: 20),
+                valueStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                icon: Icons.arrow_upward,
+                iconColor: Colors.redAccent,
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: _buildInfoCard(
-                title: 'Transações',
+                title: context.l10n('transactions'),
                 value: transactionCount.toString(),
-                valueStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                valueStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                icon: Icons.history,
+                iconColor: Colors.blueAccent,
               ),
             ),
           ],
         ),
         const SizedBox(height: 32),
-        _buildChartSection(),
+        _buildChartSection(context),
         if (showTransactions) ...[
           const SizedBox(height: 32),
-          const Text('Histórico de transações:', 
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          Text(context.l10n('transaction_history'), 
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           const SizedBox(height: 16),
           filtersWidget,
           const SizedBox(height: 16),
@@ -78,17 +96,23 @@ class DashboardContent extends StatelessWidget {
     required String title,
     required String value,
     required TextStyle valueStyle,
+    IconData? icon,
+    Color? iconColor,
   }) {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w500)),
-            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(title, style: const TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
+                if (icon != null) Icon(icon, size: 16, color: iconColor ?? Colors.grey),
+              ],
+            ),
+            const SizedBox(height: 16),
             Text(value, style: valueStyle),
           ],
         ),
@@ -96,7 +120,7 @@ class DashboardContent extends StatelessWidget {
     );
   }
 
-  Widget _buildChartSection() {
+  Widget _buildChartSection(BuildContext context) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -108,9 +132,9 @@ class DashboardContent extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Resumo financeiro',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                Text(
+                  context.l10n('financial_summary'),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -187,38 +211,38 @@ class FiltersWidget extends StatelessWidget {
         children: [
           _buildTextField(
             width: 200,
-            label: 'Buscar',
+            label: context.l10n('search'),
             icon: Icons.search,
             onChanged: onRecipientChanged,
           ),
           const SizedBox(width: 12),
-          _buildDropdownField(),
+          _buildDropdownField(context),
           const SizedBox(width: 12),
           _buildDateField(
-            label: 'Início',
+            label: context.l10n('start_date'),
             value: startDateFilter,
             onTap: onStartDatePressed,
           ),
           const SizedBox(width: 12),
           _buildDateField(
-            label: 'Fim',
+            label: context.l10n('end_date'),
             value: endDateFilter,
             onTap: onEndDatePressed,
           ),
           const SizedBox(width: 12),
           _buildAmountField(
-            label: 'Mín.',
+            label: context.l10n('min'),
             onChanged: onMinAmountChanged,
           ),
           const SizedBox(width: 12),
           _buildAmountField(
-            label: 'Máx.',
+            label: context.l10n('max'),
             onChanged: onMaxAmountChanged,
           ),
           const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.filter_list_off, color: Colors.redAccent),
-            tooltip: 'Limpar filtros',
+            tooltip: context.l10n('clear_filters'),
             onPressed: onClearFilters,
           ),
         ],
@@ -246,20 +270,20 @@ class FiltersWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildDropdownField() {
+  Widget _buildDropdownField(BuildContext context) {
     return SizedBox(
       width: 130,
       child: DropdownButtonFormField<String>(
-        value: typeFilter,
+        initialValue: typeFilter,
         decoration: InputDecoration(
-          labelText: 'Tipo',
+          labelText: context.l10n('type'),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         ),
         items: ['Todos', 'credit', 'debit']
             .map((tipo) => DropdownMenuItem(
                   value: tipo,
-                  child: Text(tipo == 'credit' ? 'Crédito' : (tipo == 'debit' ? 'Débito' : 'Todos')),
+                  child: Text(tipo == 'credit' ? context.l10n('credit') : (tipo == 'debit' ? context.l10n('debit') : context.l10n('all'))),
                 ))
             .toList(),
         onChanged: onTypeChanged,
@@ -323,45 +347,68 @@ class HistoryListWidget extends StatelessWidget {
     required this.loadingMore,
     required this.onReachEnd,
     required this.formatDate,
+    this.onTransactionTap,
   });
+
+  final Function(TransactionModel)? onTransactionTap;
 
   @override
   Widget build(BuildContext context) {
     if (filteredHistory.isEmpty) {
-      return const Card(
+      return Card(
         child: Padding(
-          padding: EdgeInsets.all(32.0),
-          child: Center(child: Text('Nenhuma transação encontrada.')),
+          padding: const EdgeInsets.all(32.0),
+          child: Center(child: Text(context.l10n('no_transactions_found'))),
         ),
       );
     }
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: displayedItems < filteredHistory.length
-            ? displayedItems + 1
-            : filteredHistory.length,
-        separatorBuilder: (context, index) => const Divider(height: 1),
-        itemBuilder: (context, index) {
-          if (index < displayedItems && index < filteredHistory.length) {
-            final item = filteredHistory[index];
-            final isCredit = item.type == 'credit';
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: displayedItems < filteredHistory.length
+          ? displayedItems + 1
+          : filteredHistory.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        if (index < displayedItems && index < filteredHistory.length) {
+          final item = filteredHistory[index];
+          final isCredit = item.type == 'credit';
+          final category = CategorizationUtils.categorize(item.description);
 
-            return ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          return Card(
+            margin: EdgeInsets.zero,
+            child: ListTile(
+              onTap: () {
+                if (onTransactionTap != null) {
+                  onTransactionTap!(item);
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ReceiptScreen(
+                        destinatario: item.description,
+                        valorEmReais: item.amount,
+                        moeda: 'BRL',
+                        valorOriginal: item.amount,
+                        data: formatDate(item.date),
+                        transactionId: item.id,
+                      ),
+                    ),
+                  );
+                }
+              },
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               leading: Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: isCredit ? Colors.green.shade50 : Colors.red.shade50,
-                  shape: BoxShape.circle,
+                  color: (isCredit ? Colors.green : Colors.blue).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  isCredit ? Icons.add_circle_outline : Icons.remove_circle_outline,
-                  color: isCredit ? Colors.green : Colors.red,
+                  category.icon,
+                  color: isCredit ? Colors.green : Colors.blue,
+                  size: 20,
                 ),
               ),
               title: Text(
@@ -369,31 +416,34 @@ class HistoryListWidget extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               subtitle: Text(
-                formatDate(item.date),
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                '${context.l10n('cat_${category.name}')} • ${formatDate(item.date)}',
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
               ),
               trailing: Text(
-                NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(item.amount),
+                '${isCredit ? '+' : '-'} ${NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(item.amount)}',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
-                  color: isCredit ? Colors.green.shade700 : Colors.red.shade700,
+                  color: isCredit ? Colors.green : Colors.red,
                 ),
               ),
-            );
-          } else if (loadingMore) {
-            return const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Center(child: CircularProgressIndicator()),
-            );
-          } else {
-            return TextButton(
+            ),
+          );
+        } else if (loadingMore) {
+          return const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        } else {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: TextButton(
               onPressed: onReachEnd,
-              child: const Text('Carregar mais'),
-            );
-          }
-        },
-      ),
+              child: Text(context.l10n('load_more')),
+            ),
+          );
+        }
+      },
     );
   }
 }
